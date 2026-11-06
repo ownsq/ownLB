@@ -118,9 +118,7 @@ export function Events() {
 
     window.addEventListener('lanka_favorites_updated', favHandler);
     const unsub = subscribeEvents((liveEvents) => {
-      if (liveEvents && liveEvents.length > 0) {
-        setEvents(liveEvents);
-      }
+      setEvents(liveEvents || []);
     });
 
     window.addEventListener('lanka_rsvps_updated', rsvpHandler);

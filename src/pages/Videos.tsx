@@ -17,14 +17,14 @@ import {
 } from "../utils/userVideosStorage";
 import { subscribeVideos } from "../lib/firestoreService";
 
-const CATEGORIES = [
-  { name: "All", count: "8,500+ videos" },
-  { name: "Dharma Deshana", count: "2,345 videos" },
-  { name: "Meditation", count: "1,285 videos" },
-  { name: "Pirith & Chanting", count: "985 videos" },
-  { name: "Buddhist Teachings", count: "3,210 videos" },
-  { name: "Dhamma for Kids", count: "765 videos" },
-  { name: "History & Culture", count: "1,120 videos" },
+const CATEGORY_NAMES = [
+  "All",
+  "Dharma Deshana",
+  "Meditation",
+  "Pirith & Chanting",
+  "Buddhist Teachings",
+  "Dhamma for Kids",
+  "History & Culture",
 ];
 
 export function Videos() {
@@ -39,12 +39,23 @@ export function Videos() {
   const [likedVideos, setLikedVideos] = useState<string[]>([]);
   const [watchLater, setWatchLater] = useState<string[]>([]);
 
+  // Dynamic categories with live counts from database
+  const categories = useMemo(() => {
+    return CATEGORY_NAMES.map(name => {
+      const count = name === "All" 
+        ? videos.length 
+        : videos.filter(v => v.category === name).length;
+      return {
+        name,
+        count: `${count} ${count === 1 ? 'video' : 'videos'}`
+      };
+    });
+  }, [videos]);
+
   // Synchronize with storage & Firestore updates
   useEffect(() => {
     const unsub = subscribeVideos((liveVideos) => {
-      if (liveVideos && liveVideos.length > 0) {
-        setVideos(liveVideos);
-      }
+      setVideos(liveVideos || []);
     });
 
     const handleVideos = () => {
@@ -274,7 +285,7 @@ export function Videos() {
                     onChange={(e) => setSubmitForm({ ...submitForm, category: e.target.value })} 
                     className="w-full px-3 py-2 bg-neutral-50 border border-neutral-200 rounded-lg text-xs"
                   >
-                    {CATEGORIES.filter(c => c.name !== "All").map(c => <option key={c.name}>{c.name}</option>)}
+                    {categories.filter(c => c.name !== "All").map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
                   </select>
                 </div>
               </div>
@@ -397,17 +408,20 @@ export function Videos() {
           </div>
 
           <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
-            {CATEGORIES.map(cat => (
+            {categories.map(cat => (
               <button 
                 key={cat.name}
                 onClick={() => setActiveCategory(cat.name)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors flex items-center gap-1.5 ${
                   activeCategory === cat.name 
                     ? 'bg-neutral-900 text-white' 
                     : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
                 }`}
               >
-                {cat.name}
+                <span>{cat.name}</span>
+                <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${activeCategory === cat.name ? 'bg-neutral-700 text-neutral-200' : 'bg-neutral-200/70 text-neutral-500'}`}>
+                  {cat.count.split(' ')[0]}
+                </span>
               </button>
             ))}
           </div>
@@ -422,47 +436,70 @@ export function Videos() {
             <span className="text-xs text-neutral-400">Click any video to play</span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredVideos.map((video) => (
-              <div 
-                key={video.id}
-                onClick={() => setActiveVideoModal(video)}
-                className="bg-white rounded-xl border border-neutral-200 overflow-hidden hover:border-red-300 hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between"
-              >
-                <div className="relative aspect-video overflow-hidden">
-                  <img src={video.img} alt={video.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                  <div className="absolute inset-0 bg-black/20 group-hover:bg-black/30 transition-colors flex items-center justify-center">
-                    <div className="w-10 h-10 bg-white/90 rounded-full flex items-center justify-center shadow">
-                      <Play className="w-4 h-4 fill-red-600 text-red-600 ml-0.5" />
+          {filteredVideos.length === 0 ? (
+            <div className="bg-white rounded-2xl border border-neutral-200 p-12 text-center space-y-3 shadow-2xs">
+              <div className="w-14 h-14 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto">
+                <PlaySquare className="w-7 h-7" />
+              </div>
+              <h4 className="font-bold text-base text-neutral-900">No Dhamma videos found</h4>
+              <p className="text-xs text-neutral-500 max-w-sm mx-auto">
+                {searchQuery 
+                  ? `No videos match your search "${searchQuery}". Try different keywords or browse all categories.`
+                  : `No videos have been uploaded to this category yet. Submit a YouTube link to share Dhamma teachings with the community.`
+                }
+              </p>
+              <div className="pt-2">
+                <button 
+                  onClick={() => setShowSubmitModal(true)}
+                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl shadow-xs inline-flex items-center gap-1.5"
+                >
+                  <UploadCloud className="w-3.5 h-3.5" /> Submit YouTube Video
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredVideos.map((video) => (
+                <div 
+                  key={video.id}
+                  onClick={() => setActiveVideoModal(video)}
+                  className="bg-white rounded-xl border border-neutral-200 overflow-hidden hover:border-red-300 hover:shadow-md transition-all cursor-pointer group flex flex-col justify-between"
+                >
+                  <div className="relative aspect-video overflow-hidden">
+                    <img src={video.img} alt={video.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                    <div className="absolute inset-0 bg-black/20 group-hover:bg-black/30 transition-colors flex items-center justify-center">
+                      <div className="w-10 h-10 bg-white/90 rounded-full flex items-center justify-center shadow">
+                        <Play className="w-4 h-4 fill-red-600 text-red-600 ml-0.5" />
+                      </div>
+                    </div>
+                    {video.isLive ? (
+                      <span className="absolute top-2 left-2 bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 rounded shadow">
+                        LIVE
+                      </span>
+                    ) : (
+                      <span className="absolute bottom-2 right-2 bg-black/70 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
+                        {video.duration}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="p-3.5 flex-1 flex flex-col justify-between">
+                    <div>
+                      <h4 className="font-bold text-xs text-neutral-900 group-hover:text-red-600 transition-colors line-clamp-2 leading-tight mb-1">
+                        {video.title}
+                      </h4>
+                      <p className="text-[11px] text-neutral-500 truncate">{video.author}</p>
+                    </div>
+
+                    <div className="mt-3 pt-2 border-t border-neutral-100 flex items-center justify-between text-[10px] text-neutral-400">
+                      <span>{video.views}</span>
+                      <span>{video.time}</span>
                     </div>
                   </div>
-                  {video.isLive ? (
-                    <span className="absolute top-2 left-2 bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 rounded shadow">
-                      LIVE
-                    </span>
-                  ) : (
-                    <span className="absolute bottom-2 right-2 bg-black/70 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
-                      {video.duration}
-                    </span>
-                  )}
                 </div>
-
-                <div className="p-3.5 flex-1 flex flex-col justify-between">
-                  <div>
-                    <h4 className="font-bold text-xs text-neutral-900 group-hover:text-red-600 transition-colors line-clamp-2 leading-tight mb-1">
-                      {video.title}
-                    </h4>
-                    <p className="text-[11px] text-neutral-500 truncate">{video.author}</p>
-                  </div>
-
-                  <div className="mt-3 pt-2 border-t border-neutral-100 flex items-center justify-between text-[10px] text-neutral-400">
-                    <span>{video.views}</span>
-                    <span>{video.time}</span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

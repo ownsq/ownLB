@@ -15,7 +15,7 @@ import { TravelView } from "../components/directory/TravelView";
 import { BoardView } from "../components/directory/BoardView";
 import { MessagesView } from "../components/directory/MessagesView";
 import { NotificationsView } from "../components/directory/NotificationsView";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { BookmarksView } from "../components/directory/BookmarksView";
 import { useAuth } from "../contexts/AuthContext";
 import { useAd } from "../contexts/AdContext";
@@ -27,137 +27,8 @@ import { DigitalCardsManagerModal } from "../components/cards/DigitalCardsManage
 import { InvitationsManagerModal } from "../components/invitations/InvitationsManagerModal";
 import { GoogleAdSense } from "../components/ads/GoogleAdSense";
 import { useSectionConfig, SectionGuard, SectionKey } from "../contexts/SectionContext";
-
-const UPCOMING_EVENTS = [
-  { mon: "MAY", day: "25", title: "Vesak Celebration & Lanterns", loc: "Los Angeles, USA", date: "May 25, 2025", time: "6:00 PM", desc: "Grand Vesak Poya celebration with traditional lantern display, Dhamma sermon, and community blessings." },
-  { mon: "JUN", day: "08", title: "Dhamma Discussion & Meditation", loc: "London, UK", date: "Jun 8, 2025", time: "6:30 PM", desc: "Guided meditation and Sutta study discussion led by resident Venerable monks." },
-  { mon: "JUN", day: "15", title: "Temple Visit & Sangha Dana", loc: "Toronto, Canada", date: "Jun 15, 2025", time: "11:30 AM", desc: "Community fellowship luncheon and Sanghika Dana alms giving." },
-  { mon: "JUN", day: "29", title: "Mindfulness Day Retreat", loc: "Sydney, Australia", date: "Jun 29, 2025", time: "9:00 AM - 4:00 PM", desc: "Full-day Vipassana meditation retreat and mindful walking in peaceful surroundings." },
-];
-
-const COMMUNITY_GLOBAL_ITEMS: MapMarkerItem[] = [
-  {
-    id: "cg-1",
-    name: "Los Angeles Community Chapter",
-    subtitle: "Active Buddhist & Cultural Community Hub • 1.2K Members",
-    address: "Los Angeles, CA, USA",
-    lat: 34.0522,
-    lng: -118.2437,
-    category: "Community Chapter",
-    badge: "1.2K Members",
-    link: "/groups"
-  },
-  {
-    id: "cg-2",
-    name: "London Buddhist Vihara Group",
-    subtitle: "Chiswick, London • Dhamma Classes & Community Meals",
-    address: "London, UK",
-    lat: 51.5074,
-    lng: -0.1278,
-    category: "Community Chapter",
-    badge: "2.4K Members",
-    link: "/groups"
-  },
-  {
-    id: "cg-3",
-    name: "Melbourne Sinhala Buddhist Society",
-    subtitle: "Victoria, Australia • Sunday School & Cultural Events",
-    address: "Melbourne, Australia",
-    lat: -37.8136,
-    lng: 144.9631,
-    category: "Community Chapter",
-    badge: "3.1K Members",
-    link: "/groups"
-  },
-  {
-    id: "cg-4",
-    name: "Toronto Sri Lankan Fellowship",
-    subtitle: "Scarborough, Ontario • Youth Activities & Seva",
-    address: "Toronto, Canada",
-    lat: 43.6532,
-    lng: -79.3832,
-    category: "Community Chapter",
-    badge: "1.8K Members",
-    link: "/groups"
-  },
-  {
-    id: "cg-5",
-    name: "Sydney Buddhist Community",
-    subtitle: "New South Wales • Meditation, Poya Observance & Support",
-    address: "Sydney, Australia",
-    lat: -33.8688,
-    lng: 151.2093,
-    category: "Community Chapter",
-    badge: "2.1K Members",
-    link: "/groups"
-  },
-  {
-    id: "cg-6",
-    name: "Singapore Buddhist Fellowship",
-    subtitle: "Theravada Center & Monastic Support Network",
-    address: "Singapore",
-    lat: 1.3521,
-    lng: 103.8198,
-    category: "Community Chapter",
-    badge: "950 Members",
-    link: "/groups"
-  },
-  {
-    id: "cg-7",
-    name: "Tokyo Sri Lankan Society",
-    subtitle: "Japan • Cultural exchange & Student Support Circle",
-    address: "Tokyo, Japan",
-    lat: 35.6762,
-    lng: 139.6503,
-    category: "Community Chapter",
-    badge: "620 Members",
-    link: "/groups"
-  },
-  {
-    id: "cg-8",
-    name: "Dubai Sri Lankan Expatriates",
-    subtitle: "United Arab Emirates • Professional & Community Network",
-    address: "Dubai, UAE",
-    lat: 25.2048,
-    lng: 55.2708,
-    category: "Community Chapter",
-    badge: "1.5K Members",
-    link: "/groups"
-  },
-  {
-    id: "ev-1",
-    name: "Grand Vesak Celebration & Lanterns",
-    subtitle: "May 25, 2025 • 6:00 PM • Sri Lanka Buddhist Temple",
-    address: "Los Angeles, USA",
-    lat: 34.0522,
-    lng: -118.2437,
-    category: "Upcoming Event",
-    badge: "Vesak Poya",
-    link: "/events"
-  },
-  {
-    id: "ev-2",
-    name: "Dhamma Discussion & Meditation",
-    subtitle: "Jun 8, 2025 • 6:30 PM • Chiswick Cultural Hall",
-    address: "London, UK",
-    lat: 51.5074,
-    lng: -0.1278,
-    category: "Upcoming Event",
-    badge: "Dhamma Talk",
-    link: "/events"
-  },
-  {
-    id: "ev-3",
-    name: "Mindfulness Day Retreat",
-    subtitle: "Jun 29, 2025 • 9:00 AM • Blue Mountains Retreat Center",
-    address: "Sydney, Australia",
-    lat: -33.8688,
-    lng: 151.2093,
-    category: "Upcoming Event",
-    badge: "Meditation",
-    link: "/events"
-  }
-];
+import { subscribeEvents, subscribeTemples, subscribeGroups, subscribeUsers } from "../lib/firestoreService";
+import { getCoordinatesForLocation } from "../utils/googleMapsConfig";
 
 export function Directory() {
   const [toastMessage, setToastMessage] = useState("");
@@ -167,6 +38,89 @@ export function Directory() {
   const [rsvpdEvents, setRsvpdEvents] = useState<Record<string, boolean>>({});
   const [isDigitalCardsOpen, setIsDigitalCardsOpen] = useState(false);
   const [isInvitationsOpen, setIsInvitationsOpen] = useState(false);
+
+  // Live Firestore Data States
+  const [dbEvents, setDbEvents] = useState<any[]>([]);
+  const [dbTemples, setDbTemples] = useState<any[]>([]);
+  const [dbGroups, setDbGroups] = useState<any[]>([]);
+  const [dbUsers, setDbUsers] = useState<any[]>([]);
+
+  useEffect(() => {
+    const unsubE = subscribeEvents((list) => setDbEvents(list));
+    const unsubT = subscribeTemples((list) => setDbTemples(list));
+    const unsubG = subscribeGroups((list) => setDbGroups(list));
+    const unsubU = subscribeUsers((list) => setDbUsers(list));
+    return () => {
+      unsubE();
+      unsubT();
+      unsubG();
+      unsubU();
+    };
+  }, []);
+
+  // Compute dynamic global map markers from live database
+  const communityGlobalItems = useMemo(() => {
+    const items: MapMarkerItem[] = [];
+    dbTemples.forEach((t) => {
+      const coords = (t.lat && t.lng) 
+        ? { lat: Number(t.lat), lng: Number(t.lng) } 
+        : getCoordinatesForLocation(t.address || t.loc || t.city || t.name);
+      items.push({
+        id: `temple-${t.id}`,
+        name: t.name,
+        subtitle: `${t.city || t.loc || 'Temple'} • ${t.sect || 'Theravada'}`,
+        address: t.address || t.loc || t.city || 'Buddhist Vihara',
+        lat: coords.lat,
+        lng: coords.lng,
+        category: 'Temple',
+        badge: t.tags?.[0] || 'Temple',
+        link: `/temples/${t.id}`
+      });
+    });
+
+    dbEvents.forEach((e) => {
+      const coords = (e.lat && e.lng) 
+        ? { lat: Number(e.lat), lng: Number(e.lng) } 
+        : getCoordinatesForLocation(e.location || e.city || e.title);
+      items.push({
+        id: `event-${e.id}`,
+        name: e.title,
+        subtitle: `${e.date} • ${e.time || 'All Day'} • ${e.location}`,
+        address: e.location || e.city || 'Event Venue',
+        lat: coords.lat,
+        lng: coords.lng,
+        category: 'Upcoming Event',
+        badge: e.category || 'Event',
+        link: '/events'
+      });
+    });
+
+    dbGroups.forEach((g) => {
+      const coords = getCoordinatesForLocation(g.city || g.country || g.name);
+      items.push({
+        id: `group-${g.id}`,
+        name: g.name,
+        subtitle: `${g.category || 'Community Group'} • ${g.membersCount || 1} Members`,
+        address: g.city || g.country || 'Global Hub',
+        lat: coords.lat,
+        lng: coords.lng,
+        category: 'Community Chapter',
+        badge: `${g.membersCount || 1} Members`,
+        link: '/directory?view=groups'
+      });
+    });
+
+    return items;
+  }, [dbTemples, dbEvents, dbGroups]);
+
+  // Distinct countries count
+  const distinctCountriesCount = useMemo(() => {
+    const set = new Set<string>();
+    dbUsers.forEach(u => { if (u.country || u.location) set.add(u.country || u.location); });
+    dbTemples.forEach(t => { if (t.country || t.city) set.add(t.country || t.city); });
+    dbEvents.forEach(e => { if (e.location) set.add(e.location); });
+    return Math.max(set.size, 1);
+  }, [dbUsers, dbTemples, dbEvents]);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -476,21 +430,23 @@ export function Directory() {
 
               <div className="h-[520px] w-full rounded-xl overflow-hidden border border-neutral-200 shadow-inner">
                 <InteractiveEntityMap
-                  items={COMMUNITY_GLOBAL_ITEMS}
+                  items={communityGlobalItems}
                   height="100%"
                   defaultZoom={2}
                   onItemClick={(item) => {
                     if (item.category === 'Upcoming Event') {
-                      const matched = UPCOMING_EVENTS.find(e => e.title.includes(item.name) || item.name.includes(e.title));
+                      const evId = String(item.id).replace('event-', '');
+                      const matched = dbEvents.find(e => e.id === evId || e.title === item.name);
                       setSelectedEventModal({
-                        id: String(item.id),
-                        title: item.name,
+                        id: matched?.id || String(item.id),
+                        title: matched?.title || item.name,
                         date: matched?.date || "Upcoming",
                         time: matched?.time || "Evening",
-                        loc: item.address || "Community Center",
-                        desc: `${item.subtitle || ''}. Click directions or RSVP to attend.`,
-                        isAttending: rsvpdEvents[String(item.id)] || false,
-                        organizer: "Global Community Directory"
+                        location: matched?.location || item.address || "Community Center",
+                        category: matched?.category || "Community Event",
+                        description: matched?.description || `${item.subtitle || ''}. Click directions or RSVP to attend.`,
+                        isAttending: rsvpdEvents[matched?.id || String(item.id)] || false,
+                        organizer: matched?.organizer || "Global Community Directory"
                       });
                     }
                   }}
@@ -499,20 +455,22 @@ export function Directory() {
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
                 <div className="p-3 bg-neutral-50 rounded-xl text-center border border-neutral-100">
-                  <div className="font-bold text-base text-neutral-900">120+</div>
+                  <div className="font-bold text-base text-neutral-900">
+                    {Math.max(1, new Set([...dbTemples.map(t => t.country).filter(Boolean), ...dbEvents.map(e => e.country).filter(Boolean)]).size)}
+                  </div>
                   <div className="text-[10px] text-neutral-500">Countries Represented</div>
                 </div>
                 <div className="p-3 bg-neutral-50 rounded-xl text-center border border-neutral-100">
-                  <div className="font-bold text-base text-emerald-600">9 Chapters</div>
-                  <div className="text-[10px] text-neutral-500">Global Hubs</div>
+                  <div className="font-bold text-base text-emerald-600">{dbTemples.length + dbGroups.length}</div>
+                  <div className="text-[10px] text-neutral-500">Temples & Chapters</div>
                 </div>
                 <div className="p-3 bg-neutral-50 rounded-xl text-center border border-neutral-100">
-                  <div className="font-bold text-base text-rose-600">30+</div>
-                  <div className="text-[10px] text-neutral-500">Annual Events</div>
+                  <div className="font-bold text-base text-rose-600">{dbEvents.length}</div>
+                  <div className="text-[10px] text-neutral-500">Active Events</div>
                 </div>
                 <div className="p-3 bg-neutral-50 rounded-xl text-center border border-neutral-100">
-                  <div className="font-bold text-base text-indigo-600">25K+</div>
-                  <div className="text-[10px] text-neutral-500">Active Diaspora</div>
+                  <div className="font-bold text-base text-indigo-600">{Math.max(dbUsers.length, 1)}</div>
+                  <div className="text-[10px] text-neutral-500">Registered Members</div>
                 </div>
               </div>
             </div>
@@ -529,11 +487,10 @@ export function Directory() {
             <h3 className="font-bold text-neutral-900 mb-4">Community Stats</h3>
             <div className="space-y-4">
               {[
-                { icon: Users, val: "25,738", label: "Members", color: "text-purple-600", bg: "bg-purple-50" },
-                { icon: Grid, val: "2,145", label: "Groups", color: "text-blue-600", bg: "bg-blue-50" },
-                { icon: Calendar, val: "1,356", label: "Events Organized", color: "text-rose-600", bg: "bg-rose-50" },
-                { icon: MessageSquare, val: "8,742", label: "Forum Discussions", color: "text-orange-600", bg: "bg-orange-50" },
-                { icon: MapPin, val: "120+", label: "Countries", color: "text-emerald-600", bg: "bg-emerald-50" },
+                { icon: Users, val: String(Math.max(dbUsers.length, 1)), label: "Registered Members", color: "text-purple-600", bg: "bg-purple-50" },
+                { icon: Grid, val: String(dbGroups.length), label: "Community Groups", color: "text-blue-600", bg: "bg-blue-50" },
+                { icon: Calendar, val: String(dbEvents.length), label: "Events Organized", color: "text-rose-600", bg: "bg-rose-50" },
+                { icon: MapPin, val: String(dbTemples.length), label: "Monasteries & Temples", color: "text-amber-600", bg: "bg-amber-50" },
               ].map((stat, i) => (
                 <div key={i} className="flex items-center gap-3">
                   <div className={`w-10 h-10 rounded-full flex items-center justify-center ${stat.bg} ${stat.color}`}>
@@ -555,38 +512,53 @@ export function Directory() {
               <Link to="/events" className="text-xs font-medium text-blue-600 hover:text-blue-700">View All</Link>
             </div>
             <div className="space-y-3">
-              {UPCOMING_EVENTS.map((ev, i) => (
-                <div 
-                  key={i} 
-                  onClick={() => setSelectedEventModal({
-                    id: ev.title,
-                    title: ev.title,
-                    date: ev.date,
-                    time: ev.time,
-                    location: ev.loc,
-                    category: "Community Event",
-                    description: ev.desc,
-                    isAttending: rsvpdEvents[ev.title] || false,
-                    organizer: "Global Community Directory"
-                  })}
-                  className="flex gap-3 group cursor-pointer p-2.5 rounded-xl hover:bg-orange-50/60 border border-transparent hover:border-orange-200 transition-all"
-                >
-                  <div className="flex flex-col items-center justify-center min-w-[40px] bg-rose-50 text-rose-700 px-2 py-1 rounded-lg border border-rose-100 group-hover:scale-105 transition-transform shrink-0">
-                    <span className="text-[10px] font-bold text-rose-600">{ev.mon}</span>
-                    <span className="text-base font-bold text-neutral-900 leading-none">{ev.day}</span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h4 className="text-xs font-bold text-neutral-900 group-hover:text-orange-600 transition-colors line-clamp-1">{ev.title}</h4>
-                    <p className="text-[11px] text-neutral-500 flex items-center gap-1 mt-0.5 truncate">
-                      <MapPin className="w-3 h-3 text-rose-500 shrink-0" /> {ev.loc}
-                    </p>
-                    <div className="flex items-center justify-between mt-1 text-[10px]">
-                      <span className="text-neutral-400">{ev.time}</span>
-                      <span className="text-orange-600 font-semibold group-hover:underline">View Map & RSVP →</span>
-                    </div>
-                  </div>
+              {dbEvents.length === 0 ? (
+                <div className="text-center py-6 px-3 bg-neutral-50 rounded-xl border border-neutral-100">
+                  <Calendar className="w-6 h-6 text-neutral-400 mx-auto mb-1.5" />
+                  <p className="text-xs text-neutral-600 font-medium">No upcoming events scheduled yet</p>
+                  <Link to="/events" className="inline-block mt-2 text-[11px] font-bold text-orange-600 hover:underline">
+                    Organize or explore events →
+                  </Link>
                 </div>
-              ))}
+              ) : (
+                dbEvents.slice(0, 4).map((ev) => {
+                  const dateObj = new Date(ev.date || Date.now());
+                  const mon = isNaN(dateObj.getTime()) ? "EVT" : dateObj.toLocaleString("en-US", { month: "short" }).toUpperCase();
+                  const day = isNaN(dateObj.getTime()) ? "•" : dateObj.getDate();
+                  return (
+                    <div 
+                      key={ev.id} 
+                      onClick={() => setSelectedEventModal({
+                        id: ev.id,
+                        title: ev.title,
+                        date: ev.date,
+                        time: ev.time || "Evening",
+                        location: ev.location,
+                        category: ev.category || "Community Event",
+                        description: ev.description,
+                        isAttending: rsvpdEvents[ev.id] || false,
+                        organizer: ev.organizer || "Community Organizer"
+                      })}
+                      className="flex gap-3 group cursor-pointer p-2.5 rounded-xl hover:bg-orange-50/60 border border-transparent hover:border-orange-200 transition-all"
+                    >
+                      <div className="flex flex-col items-center justify-center min-w-[40px] bg-rose-50 text-rose-700 px-2 py-1 rounded-lg border border-rose-100 group-hover:scale-105 transition-transform shrink-0">
+                        <span className="text-[10px] font-bold text-rose-600">{mon}</span>
+                        <span className="text-base font-bold text-neutral-900 leading-none">{day}</span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-xs font-bold text-neutral-900 group-hover:text-orange-600 transition-colors line-clamp-1">{ev.title}</h4>
+                        <p className="text-[11px] text-neutral-500 flex items-center gap-1 mt-0.5 truncate">
+                          <MapPin className="w-3 h-3 text-rose-500 shrink-0" /> {ev.location}
+                        </p>
+                        <div className="flex items-center justify-between mt-1 text-[10px]">
+                          <span className="text-neutral-400">{ev.time || "All Day"}</span>
+                          <span className="text-orange-600 font-semibold group-hover:underline">View Map & RSVP →</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
             </div>
           </div>
 

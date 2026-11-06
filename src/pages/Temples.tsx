@@ -56,9 +56,7 @@ export function Temples() {
     setTimeout(() => setToastMessage(""), 3500);
   };
 
-  const allTemplesList = useMemo(() => {
-    return templesFromDb.length > 0 ? templesFromDb : Object.values(TEMPLES_DATA);
-  }, [templesFromDb]);
+  const allTemplesList = templesFromDb;
 
   const filteredTemples = useMemo(() => {
     return allTemplesList.filter((t) => {

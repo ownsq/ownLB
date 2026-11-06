@@ -35,17 +35,17 @@ import {
 import { isUserBanned } from "../utils/userManagementStorage";
 import { subscribeClassifieds } from "../lib/firestoreService";
 
-const CATEGORIES = [
-  { name: "Vehicles", count: "120 Listings", icon: Car, color: "text-blue-600", bg: "bg-blue-50" },
-  { name: "Property", count: "85 Listings", icon: Home, color: "text-emerald-600", bg: "bg-emerald-50" },
-  { name: "Electronics", count: "240 Listings", icon: Smartphone, color: "text-purple-600", bg: "bg-purple-50" },
-  { name: "Home & Garden", count: "150 Listings", icon: Tv, color: "text-amber-600", bg: "bg-amber-50" },
-  { name: "Fashion & Beauty", count: "180 Listings", icon: Shirt, color: "text-rose-600", bg: "bg-rose-50" },
-  { name: "Services", count: "95 Listings", icon: Briefcase, color: "text-indigo-600", bg: "bg-indigo-50" },
-  { name: "Jobs", count: "40 Listings", icon: Briefcase, color: "text-cyan-600", bg: "bg-cyan-50" },
-  { name: "Books & Education", count: "64 Listings", icon: Book, color: "text-amber-600", bg: "bg-amber-100" },
-  { name: "Sports & Hobbies", count: "86 Listings", icon: Dribbble, color: "text-purple-500", bg: "bg-purple-50" },
-  { name: "Other", count: "50 Listings", icon: MoreHorizontal, color: "text-neutral-500", bg: "bg-neutral-100" },
+const CATEGORIES_BASE = [
+  { name: "Vehicles", icon: Car, color: "text-blue-600", bg: "bg-blue-50" },
+  { name: "Property", icon: Home, color: "text-emerald-600", bg: "bg-emerald-50" },
+  { name: "Electronics", icon: Smartphone, color: "text-purple-600", bg: "bg-purple-50" },
+  { name: "Home & Garden", icon: Tv, color: "text-amber-600", bg: "bg-amber-50" },
+  { name: "Fashion & Beauty", icon: Shirt, color: "text-rose-600", bg: "bg-rose-50" },
+  { name: "Services", icon: Briefcase, color: "text-indigo-600", bg: "bg-indigo-50" },
+  { name: "Jobs", icon: Briefcase, color: "text-cyan-600", bg: "bg-cyan-50" },
+  { name: "Books & Education", icon: Book, color: "text-amber-600", bg: "bg-amber-100" },
+  { name: "Sports & Hobbies", icon: Dribbble, color: "text-purple-500", bg: "bg-purple-50" },
+  { name: "Other", icon: MoreHorizontal, color: "text-neutral-500", bg: "bg-neutral-100" },
 ];
 
 export function Classifieds() {
@@ -113,6 +113,17 @@ export function Classifieds() {
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>(getAuditLogs);
   const [userProfile, setUserProfile] = useState<UserProfile>(getUserProfile);
 
+  // Dynamic category counts from live database
+  const CATEGORIES = useMemo(() => {
+    return CATEGORIES_BASE.map(cat => {
+      const count = listings.filter(item => item.cat === cat.name).length;
+      return {
+        ...cat,
+        count: `${count} ${count === 1 ? 'Listing' : 'Listings'}`
+      };
+    });
+  }, [listings]);
+
   const refreshAllData = () => {
     setListings(getListings());
     setAuctions(getAuctions());
@@ -123,9 +134,7 @@ export function Classifieds() {
 
   useEffect(() => {
     const unsub = subscribeClassifieds((liveItems) => {
-      if (liveItems && liveItems.length > 0) {
-        setListings(liveItems);
-      }
+      setListings(liveItems || []);
     });
 
     const handleAuctionsUpdated = (e: CustomEvent<AuctionItem[]>) => {

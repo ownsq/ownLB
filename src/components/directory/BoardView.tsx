@@ -2,10 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { 
   Search, Plus, MessageSquare, ThumbsUp, MapPin, X, Send, 
   Sparkles, CheckCircle2, Bookmark, Share2, Tag, Filter,
-  MessageCircle, CornerDownRight, Heart, User, Check
+  MessageCircle, CornerDownRight, Heart, User, Check, Loader2
 } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { 
+  subscribeDiscussions, 
+  addDiscussionToDb, 
+  addDiscussionCommentToDb 
+} from '../../lib/firestoreService';
 
 export interface TopicComment {
   id: string;
@@ -34,161 +39,21 @@ export interface Topic {
   comments: TopicComment[];
 }
 
-const STORAGE_KEY = "sl_community_board_topics_v2";
-
-const defaultTopics: Topic[] = [
-  {
-    id: "top-intro",
-    title: "Ayubowan! Introducing myself from Los Angeles chapter",
-    author: "Malith Weerasinghe",
-    time: "30 mins ago",
-    replies: 8,
-    likes: 19,
-    liked: false,
-    bookmarked: false,
-    pinned: true,
-    tags: ["Welcome", "Los Angeles", "Community"],
-    img: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200",
-    category: "Introductions",
-    content: "Ayubowan everyone! I recently relocated to Southern California from Kandy. Excited to connect with local Sri Lankan Dhamma friends, join weekend temple Dana sessions, and volunteer for community initiatives. Looking forward to meeting you all!",
-    comments: [
-      {
-        id: "c-intro-1",
-        author: "Ven. Thilakawansha Thero",
-        avatar: "https://images.unsplash.com/photo-1544837332-9c1251917f18?auto=format&fit=crop&q=80&w=200",
-        time: "20 mins ago",
-        text: "Warm welcome to our community, Malith! You are warmly invited to our Sunday meditation and Dhamma discussions at the LA Buddhist Temple."
-      },
-      {
-        id: "c-intro-2",
-        author: "Chamika J.",
-        avatar: "https://i.pravatar.cc/150?u=chamika",
-        time: "10 mins ago",
-        text: "Welcome Malith! There's an active cricket and weekend hiking group here too. Glad to have you with us!"
-      }
-    ]
-  },
-  { 
-    id: "top-1",
-    title: "What is the best Buddhist book for beginners?", 
-    author: "Vimukthi Perera", 
-    time: "2 hours ago", 
-    replies: 24, 
-    likes: 42,
-    liked: true,
-    bookmarked: true,
-    tags: ["Dhamma", "Books", "Beginners"],
-    img: "https://i.pravatar.cc/150?u=vimukthi", 
-    category: "Dhamma Discussions",
-    content: "I want to start studying Theravada Buddhism more deeply this year. Which introductory books would you recommend for grasping the core tenets clearly without feeling overwhelmed by technical Pali terms?",
-    comments: [
-      { 
-        id: "c-1", 
-        author: "Ven. Thilakawansha Thero", 
-        avatar: "https://images.unsplash.com/photo-1544837332-9c1251917f18?auto=format&fit=crop&q=80&w=200", 
-        time: "1 hour ago", 
-        text: "'What the Buddha Taught' by Walpola Rahula Thero is the quintessential foundational reading. May your study bear fruit!" 
-      },
-      { 
-        id: "c-2", 
-        author: "Nirosha J.", 
-        avatar: "https://i.pravatar.cc/150?u=nirosha", 
-        time: "45 mins ago", 
-        text: "Bhikkhu Bodhi's 'In the Buddha's Words' is also an exceptional canonical anthology arranged thematically." 
-      }
-    ]
-  },
-  { 
-    id: "top-2",
-    title: "How to stay mindful in a busy corporate environment?", 
-    author: "Kavindu Silva", 
-    time: "4 hours ago", 
-    replies: 18, 
-    likes: 31,
-    liked: false,
-    tags: ["Mindfulness", "Workplace", "Wellness"],
-    img: "https://i.pravatar.cc/150?u=kavindu", 
-    category: "Community Help",
-    content: "Balancing deadlines, emails, and back-to-back meetings often leaves me mentally exhausted by 3 PM. How do other working professionals incorporate micro-meditations during workday breaks?",
-    comments: [
-      { 
-        id: "c-3", 
-        author: "Sahan J.", 
-        avatar: "https://i.pravatar.cc/150?u=sahan", 
-        time: "2 hours ago", 
-        text: "I take a 3-minute conscious breathing break before entering any high-stakes meeting. It completely resets my autonomic nervous system." 
-      }
-    ]
-  },
-  { 
-    id: "top-3",
-    title: "Best cultural and temple circuits to visit in Sri Lanka", 
-    author: "Rashmi De Silva", 
-    time: "6 hours ago", 
-    replies: 32, 
-    likes: 56,
-    liked: false,
-    tags: ["Heritage", "Pilgrimage", "Travel"],
-    img: "https://i.pravatar.cc/150?u=rashmi", 
-    category: "Travel & Lifestyle",
-    content: "Planning a 2-week heritage tour including Anuradhapura, Polonnaruwa, Dambulla, and Sigiriya. Any hidden gem monasteries or quiet meditation centers along the route?",
-    comments: [
-      { 
-        id: "c-4", 
-        author: "Chamika J.", 
-        avatar: "https://i.pravatar.cc/150?u=chamika", 
-        time: "5 hours ago", 
-        text: "Do not miss Ritigala Strict Natural Reserve forest hermitage! It is ancient, peaceful, and untouched by heavy commercial tourism." 
-      }
-    ]
-  },
-  { 
-    id: "top-4",
-    title: "Looking for travel buddies to Japan in November", 
-    author: "Sahan Jayasekara", 
-    time: "8 hours ago", 
-    replies: 15, 
-    likes: 14,
-    liked: false,
-    tags: ["Japan", "Expats", "Travel Buddies"],
-    img: "https://i.pravatar.cc/150?u=sahan", 
-    category: "Travel & Lifestyle",
-    content: "Visiting Kyoto temple gardens during autumn foliage season. Would love to link up with fellow Sri Lankan expats traveling in the Kansai area.",
-    comments: []
-  },
-  { 
-    id: "top-5",
-    title: "Organizing a Vesak Dana in Melbourne - Volunteers needed", 
-    author: "Nadeesha Perera", 
-    time: "1 day ago", 
-    replies: 45, 
-    likes: 78,
-    liked: false,
-    tags: ["Melbourne", "Vesak", "Volunteering"],
-    img: "https://i.pravatar.cc/150?u=nadeesha", 
-    category: "Events & Activities",
-    content: "We need 10 volunteers to help prep food stalls and tea distribution for the upcoming temple festival. Please comment if you can spare 2 hours on Saturday morning.",
-    comments: []
-  },
-];
-
 export function BoardView() {
   const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // Load topics from localStorage or fallback
-  const [topics, setTopics] = useState<Topic[]>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch (e) {
-      console.error("Failed to parse community board topics:", e);
-    }
-    return defaultTopics;
-  });
+  const [topics, setTopics] = useState<Topic[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Subscribe to live Firestore discussions
+  useEffect(() => {
+    const unsub = subscribeDiscussions((dbTopics) => {
+      setTopics(dbTopics || []);
+      setLoading(false);
+    });
+    return () => unsub();
+  }, []);
 
   // Category and search state
   const initialCategoryParam = searchParams.get("category");
@@ -204,6 +69,7 @@ export function BoardView() {
   // Modals state
   const [isNewTopicModalOpen, setIsNewTopicModalOpen] = useState(false);
   const [selectedTopic, setSelectedTopic] = useState<Topic | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [newTopicForm, setNewTopicForm] = useState({ 
     title: '', 
     category: 'Dhamma Discussions', 
@@ -211,15 +77,6 @@ export function BoardView() {
     tags: ''
   });
   const [replyText, setReplyText] = useState("");
-
-  // Sync to localStorage
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(topics));
-    } catch (e) {
-      console.error("Failed to save topics to localStorage:", e);
-    }
-  }, [topics]);
 
   // Handle URL query parameters on mount or change
   useEffect(() => {
@@ -301,7 +158,7 @@ export function BoardView() {
     }));
   };
 
-  const handleCreateTopic = (e: React.FormEvent) => {
+  const handleCreateTopic = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTopicForm.title.trim() || !newTopicForm.content.trim()) return;
 
@@ -310,10 +167,10 @@ export function BoardView() {
       .map(tag => tag.trim())
       .filter(Boolean);
 
-    const newTopic: Topic = {
-      id: `top-${Date.now()}`,
+    setIsSubmitting(true);
+    const newTopicData = {
       title: newTopicForm.title.trim(),
-      author: user?.name || "Saminda Fernando",
+      author: user?.name || user?.email?.split('@')[0] || "Community Member",
       time: "Just now",
       replies: 0,
       likes: 1,
@@ -327,36 +184,46 @@ export function BoardView() {
       comments: []
     };
 
-    const updated = [newTopic, ...topics];
-    setTopics(updated);
-    setIsNewTopicModalOpen(false);
-    setNewTopicForm({ title: '', category: 'Dhamma Discussions', content: '', tags: '' });
-    showToast("Discussion topic published to the community board!");
-    handleOpenTopic(newTopic);
+    try {
+      const newId = await addDiscussionToDb(newTopicData);
+      setIsNewTopicModalOpen(false);
+      setNewTopicForm({ title: '', category: 'Dhamma Discussions', content: '', tags: '' });
+      showToast("Discussion topic published to the community board!");
+      handleOpenTopic({ id: newId, ...newTopicData });
+    } catch (err) {
+      console.error("Failed to add discussion topic:", err);
+      showToast("Failed to publish discussion. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleAddReply = (e: React.FormEvent) => {
+  const handleAddReply = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!replyText.trim() || !selectedTopic) return;
 
     const newComment: TopicComment = {
       id: `com-${Date.now()}`,
-      author: user?.name || "Saminda Fernando",
+      author: user?.name || user?.email?.split('@')[0] || "Community Member",
       avatar: user?.avatar || "https://images.unsplash.com/photo-1599566150163-29194dcaad36?auto=format&fit=crop&q=80&w=200",
       time: "Just now",
       text: replyText.trim()
     };
 
-    const updatedTopic = {
-      ...selectedTopic,
-      replies: selectedTopic.replies + 1,
-      comments: [...selectedTopic.comments, newComment]
-    };
-
-    setSelectedTopic(updatedTopic);
-    setTopics(topics.map(t => t.id === updatedTopic.id ? updatedTopic : t));
-    setReplyText("");
-    showToast("Your reply was posted successfully!");
+    try {
+      await addDiscussionCommentToDb(selectedTopic.id, selectedTopic.comments || [], newComment);
+      const updatedTopic = {
+        ...selectedTopic,
+        replies: (selectedTopic.replies || 0) + 1,
+        comments: [...(selectedTopic.comments || []), newComment]
+      };
+      setSelectedTopic(updatedTopic);
+      setReplyText("");
+      showToast("Your reply was posted successfully!");
+    } catch (err) {
+      console.error("Failed to post reply:", err);
+      showToast("Failed to post reply. Please try again.");
+    }
   };
 
   const handleShareTopic = (topic: Topic) => {
@@ -808,10 +675,18 @@ export function BoardView() {
                 </button>
                 <button 
                   type="submit"
-                  disabled={!newTopicForm.title.trim() || !newTopicForm.content.trim()}
+                  disabled={!newTopicForm.title.trim() || !newTopicForm.content.trim() || isSubmitting}
                   className="px-5 py-2 text-xs font-bold text-white bg-orange-600 hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-colors shadow-xs flex items-center gap-1.5"
                 >
-                  <Send className="w-3.5 h-3.5" /> Publish Discussion
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" /> Publishing...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-3.5 h-3.5" /> Publish Discussion
+                    </>
+                  )}
                 </button>
               </div>
             </form>

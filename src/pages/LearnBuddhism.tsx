@@ -20,6 +20,7 @@ import { CoursePlayer } from "../components/learn/CoursePlayer";
 import { CourseCreatorModal } from "../components/learn/CourseCreatorModal";
 import { CurriculumImporterModal } from "../components/learn/CurriculumImporterModal";
 import { CourseCertificateModal } from "../components/learn/CourseCertificateModal";
+import { subscribeCourses } from "../lib/firestoreService";
 
 interface QuickDhammaLesson {
   id: string;
@@ -144,6 +145,12 @@ export function LearnBuddhism() {
     window.addEventListener("lanka_courses_updated", handleCoursesUpdated);
     window.addEventListener("lanka_learning_updated", handleLearningUpdated);
 
+    const unsubCourses = subscribeCourses((liveCourses) => {
+      if (liveCourses && liveCourses.length > 0) {
+        setCourses(liveCourses as BuddhismCourse[]);
+      }
+    });
+
     // Deep link support via ?course=id or ?lesson=id
     const courseIdParam = searchParams.get("course");
     if (courseIdParam) {
@@ -158,6 +165,7 @@ export function LearnBuddhism() {
     }
 
     return () => {
+      unsubCourses();
       window.removeEventListener("lanka_courses_updated", handleCoursesUpdated);
       window.removeEventListener("lanka_learning_updated", handleLearningUpdated);
     };

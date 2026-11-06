@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { 
   CheckCircle, MapPin, Building2, Phone, Mail, Globe, 
   Clock, Heart, Share2, Navigation, MessageSquare, 
@@ -6,15 +6,34 @@ import {
   BookOpen, ShieldCheck, X, Sparkles, Send, Check
 } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
-import { TEMPLES_DATA, Temple } from "../data/templesData";
+import { Temple } from "../data/templesData";
 import { APIProvider, Map, AdvancedMarker, Pin } from "@vis.gl/react-google-maps";
 import { GOOGLE_MAPS_API_KEY, MAP_ATTRIBUTION_IDS, getCoordinatesForLocation } from "../utils/googleMapsConfig";
-
+import { getTempleFromDb, subscribeTemples } from "../lib/firestoreService";
 
 export function TempleDetail() {
   const { id } = useParams<{ id: string }>();
-  const templeKey = id && TEMPLES_DATA[id] ? id : "buddhist-vihara-la";
-  const temple: Temple = TEMPLES_DATA[templeKey];
+  const [temple, setTemple] = useState<Temple | null>(null);
+  const [otherTemples, setOtherTemples] = useState<Temple[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!id) {
+      setLoading(false);
+      return;
+    }
+    getTempleFromDb(id).then((found) => {
+      setTemple(found);
+      setLoading(false);
+    });
+  }, [id]);
+
+  useEffect(() => {
+    const unsub = subscribeTemples((list) => {
+      setOtherTemples(list);
+    });
+    return () => unsub();
+  }, []);
 
   const [toastMessage, setToastMessage] = useState("");
   const [isSaved, setIsSaved] = useState(false);
@@ -68,26 +87,60 @@ export function TempleDetail() {
 
   const handleReviewSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!temple) return;
     if (!newReview.name || !newReview.comment) {
       showToast("Please add your name and review remarks.");
       return;
     }
-    temple.reviewList.unshift({
+    const list = temple.reviewList || [];
+    list.unshift({
       author: newReview.name,
       rating: newReview.rating,
       date: "Just now",
       comment: newReview.comment
     });
-    temple.reviews += 1;
+    temple.reviewList = list;
+    temple.reviews = (temple.reviews || 0) + 1;
     showToast("Your review was posted successfully!");
     setShowReviewModal(false);
     setNewReview({ name: "", rating: 5, comment: "" });
   };
 
   const openGoogleMaps = () => {
-    const encodedAddress = encodeURIComponent(`${temple.name}, ${temple.address}`);
-    window.open(`https://www.google.com/maps/search/?api=1&query=${encodedAddress}`, "_blank");
+    if (!temple) return;
+    const encodedAddress = encodeURIComponent(`${temple.name}, ${temple.address || temple.loc || temple.city}`);
+    const mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`;
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(mapUrl);
+      showToast("Google Maps location link copied to clipboard!");
+    } else {
+      showToast("Map coordinates ready.");
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="py-24 text-center">
+        <div className="w-10 h-10 border-3 border-amber-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+        <p className="text-sm text-neutral-600 font-medium">Loading temple details from database...</p>
+      </div>
+    );
+  }
+
+  if (!temple) {
+    return (
+      <div className="bg-white rounded-2xl border border-neutral-200 p-12 text-center max-w-lg mx-auto my-12 space-y-4">
+        <Building2 className="w-14 h-14 text-neutral-300 mx-auto" />
+        <h2 className="text-xl font-bold text-neutral-900">Temple Profile Not Found</h2>
+        <p className="text-sm text-neutral-500">
+          The requested temple profile could not be found or has not yet been registered in the database.
+        </p>
+        <Link to="/temples" className="inline-block px-4 py-2 bg-amber-600 text-white rounded-xl text-xs font-bold hover:bg-amber-700 transition-colors">
+          &larr; Back to Temples Directory
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 max-w-[1600px] mx-auto pb-12">
@@ -654,13 +707,13 @@ export function TempleDetail() {
               <Link to="/temples" className="text-xs text-blue-600 hover:underline">View All</Link>
             </div>
             <div className="space-y-3">
-              {Object.values(TEMPLES_DATA).filter(t => t.id !== temple.id).slice(0, 3).map((other) => (
+              {otherTemples.filter(t => t.id !== temple.id).slice(0, 3).map((other) => (
                 <Link key={other.id} to={`/temples/${other.id}`} className="flex gap-3 group">
-                  <img src={other.img} alt={other.name} className="w-12 h-12 rounded-lg object-cover shrink-0" />
+                  <img src={other.image || other.imageUrl || (other as any).img || "https://images.unsplash.com/photo-1542385151-efd9000785a0?auto=format&fit=crop&q=80&w=200"} alt={other.name} className="w-12 h-12 rounded-lg object-cover shrink-0" />
                   <div className="flex-1 min-w-0">
                     <h5 className="font-bold text-xs text-neutral-900 group-hover:text-amber-700 transition-colors truncate">{other.name}</h5>
-                    <p className="text-[10px] text-neutral-500">{other.loc}</p>
-                    <span className="text-[10px] text-amber-600 font-bold">★ {other.rating}</span>
+                    <p className="text-[10px] text-neutral-500 truncate">{other.location || other.address || (other as any).loc || other.city}</p>
+                    <span className="text-[10px] text-amber-600 font-bold">★ {other.rating || "4.9"}</span>
                   </div>
                 </Link>
               ))}

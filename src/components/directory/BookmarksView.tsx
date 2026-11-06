@@ -1,27 +1,8 @@
 import { Bookmark, Clock, MapPin, Search } from 'lucide-react';
 import { useState } from 'react';
 
-const MOCK_BOOKMARKS = [
-  {
-    id: 1,
-    type: "event",
-    title: "Vesak Celebration 2025",
-    author: "Buddhist Dhamma Network",
-    loc: "Los Angeles, USA",
-    time: "Saved 2 days ago",
-  },
-  {
-    id: 2,
-    type: "post",
-    title: "Beautiful Dhamma reflection on mindfulness",
-    author: "Kavindu Silva",
-    loc: "Colombo, Sri Lanka",
-    time: "Saved 1 week ago",
-  }
-];
-
 export function BookmarksView() {
-  const [bookmarks, setBookmarks] = useState(MOCK_BOOKMARKS);
+  const [bookmarks, setBookmarks] = useState<any[]>([]);
 
   return (
     <div className="space-y-6">

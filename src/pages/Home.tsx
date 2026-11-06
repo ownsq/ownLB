@@ -9,7 +9,15 @@ import { useAuth } from "../contexts/AuthContext";
 import { DiscoverNearYouWidget } from "../components/maps/DiscoverNearYouWidget";
 import { GoogleAdSense } from "../components/ads/GoogleAdSense";
 import { useSectionConfig } from "../contexts/SectionContext";
-import { subscribeEvents, subscribePosts, subscribeUsers, subscribeTemples, subscribeRestaurants } from "../lib/firestoreService";
+import { 
+  subscribeEvents, 
+  subscribePosts, 
+  subscribeUsers, 
+  subscribeTemples, 
+  subscribeRestaurants,
+  subscribeVideos,
+  subscribeCourses
+} from "../lib/firestoreService";
 
 export function Home() {
   const { user } = useAuth();
@@ -29,6 +37,8 @@ export function Home() {
   const [members, setMembers] = useState<any[]>([]);
   const [featuredTemples, setFeaturedTemples] = useState<any[]>([]);
   const [featuredRestaurants, setFeaturedRestaurants] = useState<any[]>([]);
+  const [featuredVideos, setFeaturedVideos] = useState<any[]>([]);
+  const [featuredCourses, setFeaturedCourses] = useState<any[]>([]);
 
   useEffect(() => {
     const unsubEvents = subscribeEvents((list) => setEvents(list.slice(0, 3)));
@@ -39,6 +49,8 @@ export function Home() {
     });
     const unsubTemples = subscribeTemples((list) => setFeaturedTemples(list.slice(0, 2)));
     const unsubRestaurants = subscribeRestaurants((list) => setFeaturedRestaurants(list.slice(0, 2)));
+    const unsubVideos = subscribeVideos((list) => setFeaturedVideos(list.slice(0, 2)));
+    const unsubCourses = subscribeCourses((list) => setFeaturedCourses(list.slice(0, 2)));
 
     return () => {
       unsubEvents();
@@ -46,6 +58,8 @@ export function Home() {
       unsubUsers();
       unsubTemples();
       unsubRestaurants();
+      unsubVideos();
+      unsubCourses();
     };
   }, [user]);
 
@@ -96,18 +110,23 @@ export function Home() {
       )}
 
       {/* Sub Navigation */}
-      <div className="flex items-center justify-center gap-8 md:gap-16 border-b border-neutral-200 overflow-x-auto no-scrollbar pt-2 -mx-4 px-4 md:mx-0 md:px-0">
+      <div className="flex items-center justify-start md:justify-center gap-6 md:gap-10 border-b border-neutral-200 overflow-x-auto no-scrollbar pt-2 -mx-4 px-4 md:mx-0 md:px-0">
         {[
           { name: "Community", icon: Users, path: "/", active: true },
-          { name: "Places", icon: MapPin, path: "/directory", key: "directory" },
+          { name: "Temples", icon: Building2, path: "/temples", key: "temples" },
+          { name: "Monks", icon: User, path: "/monks", key: "monks" },
+          { name: "Famous People", icon: Sparkles, path: "/famous", key: "famous" },
+          { name: "Restaurants", icon: Utensils, path: "/restaurants", key: "restaurants" },
+          { name: "Videos", icon: PlayCircle, path: "/videos", key: "videos" },
           { name: "Events", icon: Calendar, path: "/events", key: "events" },
           { name: "Learn", icon: BookOpen, path: "/learn", key: "learn" },
           { name: "Marketplace", icon: ShoppingBag, path: "/classifieds", key: "classifieds" },
+          { name: "Directory", icon: MapPin, path: "/directory", key: "directory" },
         ].filter(tab => !tab.key || isSectionEnabled(tab.key as any)).map((tab, i) => (
           <Link 
             key={i} 
             to={tab.path}
-            className={`flex items-center gap-2 pb-4 text-sm font-medium whitespace-nowrap border-b-2 transition-colors -mb-[1px] ${
+            className={`flex items-center gap-2 pb-4 text-xs md:text-sm font-medium whitespace-nowrap border-b-2 transition-colors -mb-[1px] ${
               tab.active 
                 ? 'border-amber-600 text-amber-700 font-bold' 
                 : 'border-transparent text-neutral-500 hover:text-neutral-900 hover:border-neutral-300'
@@ -165,22 +184,24 @@ export function Home() {
       </div>
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-8 gap-3">
         {[
-          { icon: Users, label: "Find People", sub: "Connect & network", path: "/directory?view=people", color: "text-emerald-600", bg: "bg-emerald-50", hover: "group-hover:bg-emerald-100" },
-          { icon: Building2, label: "Temples", sub: "Locate & explore", path: "/temples", color: "text-amber-600", bg: "bg-amber-50", hover: "group-hover:bg-amber-100" },
-          { icon: User, label: "Monks", sub: "Learn & connect", path: "/monks", color: "text-orange-600", bg: "bg-orange-50", hover: "group-hover:bg-orange-100" },
-          { icon: Calendar, label: "Events", sub: "Join & participate", path: "/events", color: "text-rose-600", bg: "bg-rose-50", hover: "group-hover:bg-rose-100" },
-          { icon: BookOpen, label: "Learn Dhamma", sub: "Courses & teachings", path: "/learn", color: "text-emerald-700", bg: "bg-emerald-50", hover: "group-hover:bg-emerald-100" },
-          { icon: ShoppingBag, label: "Marketplace", sub: "Buy & sell", path: "/classifieds", color: "text-amber-700", bg: "bg-amber-50", hover: "group-hover:bg-amber-100" },
-        ].map((item, i) => (
-          <Link key={i} to={item.path} className="bg-white p-4 rounded-2xl border border-neutral-200 hover:border-amber-300 hover:shadow-sm transition-all flex flex-col items-center text-center gap-3 group">
-            <div className={`p-3 rounded-full ${item.bg} ${item.hover} transition-colors ${item.color}`}>
-              <item.icon className="w-6 h-6" />
+          { icon: Building2, label: "Temples", sub: "Locate & visit", path: "/temples", color: "text-amber-600", bg: "bg-amber-50", hover: "group-hover:bg-amber-100", key: "temples" },
+          { icon: User, label: "Monks", sub: "Spiritual guides", path: "/monks", color: "text-orange-600", bg: "bg-orange-50", hover: "group-hover:bg-orange-100", key: "monks" },
+          { icon: Sparkles, label: "Famous People", sub: "National icons", path: "/famous", color: "text-purple-600", bg: "bg-purple-50", hover: "group-hover:bg-purple-100", key: "famous" },
+          { icon: Utensils, label: "Restaurants", sub: "Authentic food", path: "/restaurants", color: "text-rose-600", bg: "bg-rose-50", hover: "group-hover:bg-rose-100", key: "restaurants" },
+          { icon: PlayCircle, label: "Videos", sub: "Dhamma sermons", path: "/videos", color: "text-red-600", bg: "bg-red-50", hover: "group-hover:bg-red-100", key: "videos" },
+          { icon: Calendar, label: "Events", sub: "Join gatherings", path: "/events", color: "text-amber-700", bg: "bg-amber-50", hover: "group-hover:bg-amber-100", key: "events" },
+          { icon: BookOpen, label: "Learn Dhamma", sub: "Courses & guides", path: "/learn", color: "text-emerald-700", bg: "bg-emerald-50", hover: "group-hover:bg-emerald-100", key: "learn" },
+          { icon: ShoppingBag, label: "Marketplace", sub: "Community trade", path: "/classifieds", color: "text-blue-600", bg: "bg-blue-50", hover: "group-hover:bg-blue-100", key: "classifieds" },
+        ].filter(item => !item.key || isSectionEnabled(item.key as any)).map((item, i) => (
+          <Link key={i} to={item.path} className="bg-white p-3.5 rounded-2xl border border-neutral-200 hover:border-amber-300 hover:shadow-sm transition-all flex flex-col items-center text-center gap-2 group">
+            <div className={`p-2.5 rounded-xl ${item.bg} ${item.hover} transition-colors ${item.color}`}>
+              <item.icon className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-bold text-neutral-900 text-sm group-hover:text-amber-700 transition-colors">{item.label}</h3>
-              <p className="text-xs text-neutral-500 mt-0.5">{item.sub}</p>
+              <h3 className="font-bold text-neutral-900 text-xs group-hover:text-amber-700 transition-colors">{item.label}</h3>
+              <p className="text-[10px] text-neutral-500 mt-0.5">{item.sub}</p>
             </div>
           </Link>
         ))}
@@ -354,31 +375,57 @@ export function Home() {
           
           {/* Continue Learning */}
           {isSectionEnabled("learn") && (
-            <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden flex flex-col md:flex-row">
-              <div className="w-full md:w-1/2 relative min-h-[160px] md:min-h-auto">
-                <img referrerPolicy="no-referrer" src="https://images.unsplash.com/photo-1518002171953-a080ee817e1f?auto=format&fit=crop&q=80&w=400" alt="Meditation" className="absolute inset-0 w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-black/20"></div>
-                {/* Progress Circle overlay */}
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 bg-black/40 backdrop-blur-sm rounded-full flex items-center justify-center border-2 border-white/30">
-                  <span className="text-white font-bold text-sm">60%</span>
-                  <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 36 36">
-                    <path className="text-emerald-500" strokeWidth="3" strokeDasharray="60, 100" strokeLinecap="round" fill="none" stroke="currentColor" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-                  </svg>
+            <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
+              {featuredCourses.length > 0 ? (
+                <div className="flex flex-col md:flex-row">
+                  <div className="w-full md:w-1/2 relative min-h-[160px] md:min-h-auto">
+                    <img 
+                      referrerPolicy="no-referrer" 
+                      src={featuredCourses[0].image || featuredCourses[0].thumbnail || "https://images.unsplash.com/photo-1518002171953-a080ee817e1f?auto=format&fit=crop&q=80&w=400"} 
+                      alt={featuredCourses[0].title} 
+                      className="absolute inset-0 w-full h-full object-cover" 
+                    />
+                    <div className="absolute inset-0 bg-black/30"></div>
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-14 h-14 bg-black/50 backdrop-blur-sm rounded-full flex items-center justify-center border-2 border-white/40">
+                      <BookOpen className="w-6 h-6 text-emerald-400" />
+                    </div>
+                  </div>
+                  <div className="p-6 w-full md:w-1/2 flex flex-col justify-center">
+                    <div className="mb-4">
+                      <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wide">Featured Course</span>
+                      <h4 className="font-bold text-base text-neutral-900 mt-1 line-clamp-1">{featuredCourses[0].title}</h4>
+                      <p className="text-xs text-neutral-500 mt-1 line-clamp-2">
+                        {featuredCourses[0].desc || featuredCourses[0].description || `Guided teachings by ${featuredCourses[0].instructor || "Venerable Sangha"}`}
+                      </p>
+                    </div>
+                    <Link 
+                      to="/learn" 
+                      className="w-full bg-amber-500 hover:bg-amber-600 text-white py-2.5 rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1.5 shadow-sm"
+                    >
+                      Explore Course <ChevronRight className="w-4 h-4" />
+                    </Link>
+                  </div>
                 </div>
-              </div>
-              <div className="p-6 w-full md:w-1/2 flex flex-col justify-center">
-                <div className="mb-4">
-                  <span className="text-xs font-bold text-emerald-600 uppercase tracking-wide">Continue Learning</span>
-                  <h4 className="font-bold text-lg text-neutral-900 mt-2">Mindfulness Meditation</h4>
-                  <p className="text-sm text-neutral-500 mt-1">Lesson 6 of 12 • The practice of breathing</p>
+              ) : (
+                <div className="p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div className="flex items-center gap-3.5">
+                    <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
+                      <BookOpen className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wide">Dhamma Studies</span>
+                      <h4 className="font-bold text-sm text-neutral-900 mt-0.5">Explore Sutta Studies & Meditation</h4>
+                      <p className="text-xs text-neutral-500 mt-0.5">Learn foundational Pali canons, mindfulness, and daily reflections.</p>
+                    </div>
+                  </div>
+                  <Link 
+                    to="/learn" 
+                    className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-lg shrink-0 flex items-center gap-1 shadow-xs transition-colors"
+                  >
+                    Browse Lessons <ChevronRight className="w-3.5 h-3.5" />
+                  </Link>
                 </div>
-                <Link 
-                  to="/learn" 
-                  className="w-full bg-amber-500 hover:bg-amber-600 text-white py-2.5 rounded-lg text-sm font-bold transition-colors flex items-center justify-center gap-1.5 shadow-sm"
-                >
-                  Resume Course <ChevronRight className="w-4 h-4" />
-                </Link>
-              </div>
+              )}
             </div>
           )}
         </div>
@@ -407,24 +454,24 @@ export function Home() {
               </div>
             </div>
             <div className="w-full pt-4 border-t border-neutral-100">
-              <h4 className="text-xs font-bold text-neutral-900 mb-3">Your activity this week</h4>
+              <h4 className="text-xs font-bold text-neutral-900 mb-3">Community activity</h4>
               <div className="space-y-2.5">
                 {isSectionEnabled("events") && (
                   <Link to="/events" className="flex items-center gap-3 text-xs hover:text-amber-600 transition-colors">
                     <Calendar className="w-4 h-4 text-neutral-400" />
-                    <div><span className="font-bold text-neutral-900">3</span> <span className="text-neutral-500">Events registered</span></div>
+                    <div><span className="font-bold text-neutral-900">{events.length}</span> <span className="text-neutral-500">Upcoming gatherings</span></div>
                   </Link>
                 )}
                 {isSectionEnabled("directory") && (
                   <Link to="/directory?view=people" className="flex items-center gap-3 text-xs hover:text-amber-600 transition-colors">
                     <Users className="w-4 h-4 text-neutral-400" />
-                    <div><span className="font-bold text-neutral-900">12</span> <span className="text-neutral-500">Connections</span></div>
+                    <div><span className="font-bold text-neutral-900">{Math.max(members.length, 1)}</span> <span className="text-neutral-500">Active members</span></div>
                   </Link>
                 )}
                 {isSectionEnabled("learn") && (
                   <Link to="/learn" className="flex items-center gap-3 text-xs hover:text-amber-600 transition-colors">
                     <BookOpen className="w-4 h-4 text-neutral-400" />
-                    <div><span className="font-bold text-neutral-900">45 mins</span> <span className="text-neutral-500">Learning time</span></div>
+                    <div><span className="font-bold text-neutral-900">{featuredCourses.length}</span> <span className="text-neutral-500">Dhamma courses</span></div>
                   </Link>
                 )}
               </div>
@@ -443,35 +490,52 @@ export function Home() {
           {isSectionEnabled("videos") && (
             <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
               <div className="p-4 border-b border-neutral-100 flex items-center justify-between">
-                <h3 className="font-bold text-neutral-900 text-sm">Live Dhamma</h3>
+                <h3 className="font-bold text-neutral-900 text-sm">Dhamma Videos</h3>
                 <Link to="/videos" className="text-xs text-blue-600 hover:text-blue-700 font-medium">View all</Link>
               </div>
               <div className="p-4">
-                <Link to="/videos" className="block relative w-full aspect-video rounded-xl overflow-hidden group cursor-pointer mb-3">
-                  <img 
-                    referrerPolicy="no-referrer" 
-                    src="https://images.unsplash.com/photo-1596422846543-75c6fc197f0a?auto=format&fit=crop&q=80&w=400" 
-                    alt="Live Stream" 
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
-                  />
-                  <div className="absolute inset-0 bg-black/20 group-hover:bg-black/30 transition-colors flex items-center justify-center">
-                    <div className="w-10 h-10 bg-white/90 rounded-full flex items-center justify-center shadow-sm">
-                      <PlayCircle className="w-5 h-5 text-neutral-900 fill-neutral-900" />
-                    </div>
+                {featuredVideos.length === 0 ? (
+                  <div className="text-center py-6">
+                    <PlayCircle className="w-8 h-8 text-neutral-300 mx-auto mb-2" />
+                    <p className="text-xs text-neutral-600 font-medium">No videos uploaded yet</p>
+                    <p className="text-[11px] text-neutral-400 mt-1 mb-3">Share your favorite Dhamma sermon YouTube link with the community.</p>
+                    <Link to="/videos" className="inline-block px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold transition-colors">
+                      Share Video
+                    </Link>
                   </div>
-                  <div className="absolute top-2 left-2 bg-red-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm">LIVE</div>
-                </Link>
-                <Link to="/videos" className="block">
-                  <h4 className="font-bold text-xs text-neutral-900 line-clamp-2 hover:text-amber-700 cursor-pointer transition-colors leading-tight mb-1">
-                    Dhamma Talk: The Power of Mindfulness
-                  </h4>
-                </Link>
-                <p className="text-[10px] text-neutral-500 mb-2">Ven. Kiribathgoda Gnanananda Thero</p>
-                <div className="flex items-center gap-1.5 text-[10px] text-neutral-400">
-                  <span className="flex items-center gap-1 text-neutral-600 font-medium"><Users className="w-3 h-3 text-red-500" /> 1.2K watching</span>
-                  <span>•</span>
-                  <span>Colombo, Sri Lanka</span>
-                </div>
+                ) : (
+                  <>
+                    <Link to="/videos" className="block relative w-full aspect-video rounded-xl overflow-hidden group cursor-pointer mb-3">
+                      <img 
+                        referrerPolicy="no-referrer" 
+                        src={featuredVideos[0].img || "https://images.unsplash.com/photo-1596422846543-75c6fc197f0a?auto=format&fit=crop&q=80&w=400"} 
+                        alt={featuredVideos[0].title} 
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+                      />
+                      <div className="absolute inset-0 bg-black/20 group-hover:bg-black/30 transition-colors flex items-center justify-center">
+                        <div className="w-10 h-10 bg-white/90 rounded-full flex items-center justify-center shadow-sm">
+                          <PlayCircle className="w-5 h-5 text-neutral-900 fill-neutral-900" />
+                        </div>
+                      </div>
+                      {featuredVideos[0].isLive && (
+                        <div className="absolute top-2 left-2 bg-red-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm">LIVE</div>
+                      )}
+                    </Link>
+                    <Link to="/videos" className="block">
+                      <h4 className="font-bold text-xs text-neutral-900 line-clamp-2 hover:text-amber-700 cursor-pointer transition-colors leading-tight mb-1">
+                        {featuredVideos[0].title}
+                      </h4>
+                    </Link>
+                    <p className="text-[10px] text-neutral-500 mb-2">{featuredVideos[0].author || "Venerable Sangha"}</p>
+                    <div className="flex items-center gap-1.5 text-[10px] text-neutral-400">
+                      <span className="flex items-center gap-1 text-neutral-600 font-medium">
+                        <Users className="w-3 h-3 text-red-500" /> {featuredVideos[0].views || "Dhamma Sermon"}
+                      </span>
+                      <span>•</span>
+                      <span>{featuredVideos[0].category || "Dharma Deshana"}</span>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           )}

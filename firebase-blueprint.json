@@ -294,6 +294,27 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "name", "role", "category", "country"]
+    },
+    "DiscussionItem": {
+      "title": "DiscussionItem",
+      "description": "Community board discussion topic and forum thread",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 200 },
+        "author": { "type": "string", "maxLength": 100 },
+        "authorId": { "type": "string", "maxLength": 128 },
+        "authorImg": { "type": "string", "maxLength": 1000 },
+        "category": { "type": "string", "maxLength": 60 },
+        "content": { "type": "string", "maxLength": 5000 },
+        "tags": { "type": "array" },
+        "likes": { "type": "number" },
+        "replies": { "type": "number" },
+        "pinned": { "type": "boolean" },
+        "comments": { "type": "array" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "title", "author", "authorId", "category", "content"]
     }
   },
   "firestore": {
@@ -356,6 +377,10 @@
     "/famous_people/{personId}": {
       "schema": "FamousPersonItem",
       "description": "Notable personalities and cultural icons directory"
+    },
+    "/discussions/{discussionId}": {
+      "schema": "DiscussionItem",
+      "description": "Community board forum topics and thread conversations"
     }
   }
 }

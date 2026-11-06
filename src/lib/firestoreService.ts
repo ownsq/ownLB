@@ -303,6 +303,20 @@ export async function addTempleToDb(temple: Omit<Temple, "id">, customId?: strin
   }
 }
 
+export async function getTempleFromDb(id: string): Promise<Temple | null> {
+  const path = `temples/${id}`;
+  try {
+    const snap = await getDoc(doc(db, "temples", id));
+    if (snap.exists()) {
+      return { id: snap.id, ...(snap.data() as any) } as Temple;
+    }
+    return null;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.GET, path);
+    return null;
+  }
+}
+
 export function subscribeMonks(callback: (monks: Monk[]) => void): Unsubscribe {
   const colRef = collection(db, "monks");
   return onSnapshot(
@@ -541,4 +555,61 @@ export function subscribeUsers(callback: (users: any[]) => void): Unsubscribe {
       handleFirestoreError(error, OperationType.LIST, "users");
     }
   );
+}
+
+// ==========================================
+// 8. COMMUNITY BOARD DISCUSSIONS
+// ==========================================
+export function subscribeDiscussions(callback: (topics: any[]) => void): Unsubscribe {
+  const colRef = collection(db, "discussions");
+  return onSnapshot(
+    colRef,
+    (snapshot) => {
+      const list: any[] = [];
+      snapshot.forEach((docSnap) => {
+        list.push({ id: docSnap.id, ...(docSnap.data() as any) });
+      });
+      list.sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
+      callback(list);
+    },
+    (error) => {
+      handleFirestoreError(error, OperationType.LIST, "discussions");
+    }
+  );
+}
+
+export async function addDiscussionToDb(topic: any): Promise<string> {
+  const path = "discussions";
+  try {
+    const id = `top-${Date.now()}`;
+    const cleanTopic = {
+      ...topic,
+      id,
+      authorId: auth.currentUser?.uid || "damika-user",
+      likes: topic.likes || 0,
+      replies: topic.replies || 0,
+      comments: topic.comments || [],
+      createdAt: new Date().toISOString()
+    };
+    await setDoc(doc(db, path, id), cleanTopic);
+    return id;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.CREATE, path);
+    throw error;
+  }
+}
+
+export async function addDiscussionCommentToDb(topicId: string, currentComments: any[], newComment: any): Promise<void> {
+  const path = `discussions/${topicId}`;
+  try {
+    const updated = [...(currentComments || []), newComment];
+    await updateDoc(doc(db, "discussions", topicId), {
+      comments: updated,
+      replies: updated.length,
+      updatedAt: new Date().toISOString()
+    });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, path);
+    throw error;
+  }
 }

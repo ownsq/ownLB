@@ -33,8 +33,6 @@ interface Restaurant {
   description?: string;
 }
 
-const MOCK_RESTAURANTS: Restaurant[] = [];
-
 const CUISINES_LIST = [
   { name: "All Cuisines", icon: Store },
   { name: "Sri Lankan", icon: UtensilsCrossed },
@@ -144,7 +142,7 @@ export function Restaurants() {
     setSearchQuery('');
   };
 
-  const restaurantSource = dbRestaurants.length > 0 ? dbRestaurants : MOCK_RESTAURANTS;
+  const restaurantSource = dbRestaurants;
 
   const filteredRestaurants = useMemo(() => {
     let filtered = [...restaurantSource];
