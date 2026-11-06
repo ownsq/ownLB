@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sri Lankan Community Hub & Classified Auctions</title>
+    <meta name="description" content="Peer-to-peer Sri Lankan community network, verified classified advertisements, and timed auctions with reserve pricing, anti-sniping soft close, and direct mutual contact." />
+    <meta property="og:title" content="Sri Lankan Community Hub & Classified Auctions" />
+    <meta property="og:description" content="Peer-to-peer Sri Lankan community network, verified classified advertisements, and timed auctions with reserve pricing, anti-sniping soft close, and direct mutual contact." />
+    <!-- Global Guard against third-party AdSense TagError in React SPA -->
+    <script>
+      (function() {
+        function isAdSenseError(msg, file, stack) {
+          var text = ((msg || '') + ' ' + (file || '') + ' ' + (stack || '')).toLowerCase();
+          return text.indexOf('tagerror') !== -1 ||
+                 text.indexOf('adsbygoogle') !== -1 ||
+                 text.indexOf('pagead2.googlesyndication.com') !== -1;
+        }
+
+        window.addEventListener('error', function(event) {
+          if (!event) return;
+          var msg = event.message || (event.error && event.error.message) || '';
+          var file = event.filename || '';
+          var stack = (event.error && event.error.stack) || '';
+          if (isAdSenseError(msg, file, stack)) {
+            if (event.preventDefault) event.preventDefault();
+            if (event.stopImmediatePropagation) event.stopImmediatePropagation();
+            return true;
+          }
+        }, true);
+
+        window.addEventListener('unhandledrejection', function(event) {
+          if (!event) return;
+          var reason = event.reason;
+          var msg = (reason && (reason.message || reason.toString())) || '';
+          var stack = (reason && reason.stack) || '';
+          if (isAdSenseError(msg, '', stack)) {
+            if (event.preventDefault) event.preventDefault();
+          }
+        });
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+

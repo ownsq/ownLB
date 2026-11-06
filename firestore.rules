@@ -1,0 +1,352 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Hardened Global Helpers
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == 'damika1316@gmail.com' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Entity Validation Helpers
+    function isValidUser(data) {
+      return data.keys().hasAll(['id', 'name', 'email', 'role', 'isPhoneVerified', 'isBanned']) &&
+        data.id is string && data.id.size() <= 128 &&
+        data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+        data.email is string && data.email.size() > 0 && data.email.size() <= 150 &&
+        data.role in ['Super Admin', 'Moderator', 'Verified Seller', 'Member'] &&
+        data.isPhoneVerified is bool &&
+        data.isBanned is bool &&
+        (!('phone' in data) || (data.phone is string && data.phone.size() <= 30)) &&
+        (!('avatar' in data) || (data.avatar is string && data.avatar.size() <= 1000)) &&
+        (!('location' in data) || (data.location is string && data.location.size() <= 100)) &&
+        (!('country' in data) || (data.country is string && data.country.size() <= 100)) &&
+        (!('bio' in data) || (data.bio is string && data.bio.size() <= 1000)) &&
+        (!('notes' in data) || (data.notes is string && data.notes.size() <= 1000));
+    }
+
+    function isValidClassified(data) {
+      return data.keys().hasAll(['id', 'title', 'category', 'price', 'pricingType', 'sellerId', 'status', 'createdAt']) &&
+        data.id is string && data.id.size() <= 128 &&
+        data.title is string && data.title.size() > 0 && data.title.size() <= 150 &&
+        data.category is string && data.category.size() <= 60 &&
+        data.price is number && data.price >= 0 &&
+        data.pricingType in ['Fixed', 'Negotiable', 'Auction', 'Free'] &&
+        data.sellerId is string && data.sellerId.size() <= 128 &&
+        data.status in ['active', 'sold', 'ended', 'closed', 'flagged'] &&
+        (!('description' in data) || (data.description is string && data.description.size() <= 3000)) &&
+        (!('condition' in data) || (data.condition is string && data.condition.size() <= 50)) &&
+        (!('location' in data) || (data.location is string && data.location.size() <= 100)) &&
+        (!('sellerName' in data) || (data.sellerName is string && data.sellerName.size() <= 100)) &&
+        (!('sellerEmail' in data) || (data.sellerEmail is string && data.sellerEmail.size() <= 150)) &&
+        (!('sellerPhone' in data) || (data.sellerPhone is string && data.sellerPhone.size() <= 30)) &&
+        (!('img' in data) || (data.img is string && data.img.size() <= 1000));
+    }
+
+    function isValidEvent(data) {
+      return data.keys().hasAll(['id', 'title', 'date', 'location', 'organizer', 'organizerId', 'createdAt']) &&
+        data.id is string && data.id.size() <= 128 &&
+        data.title is string && data.title.size() > 0 && data.title.size() <= 150 &&
+        data.date is string && data.date.size() <= 50 &&
+        data.location is string && data.location.size() <= 200 &&
+        data.organizer is string && data.organizer.size() <= 100 &&
+        data.organizerId is string && data.organizerId.size() <= 128 &&
+        (!('time' in data) || (data.time is string && data.time.size() <= 50)) &&
+        (!('city' in data) || (data.city is string && data.city.size() <= 100)) &&
+        (!('category' in data) || (data.category is string && data.category.size() <= 50)) &&
+        (!('img' in data) || (data.img is string && data.img.size() <= 1000)) &&
+        (!('description' in data) || (data.description is string && data.description.size() <= 3000));
+    }
+
+    function isValidCourse(data) {
+      return data.keys().hasAll(['id', 'title', 'category', 'level', 'instructor', 'createdBy', 'createdAt']) &&
+        data.id is string && data.id.size() <= 128 &&
+        data.title is string && data.title.size() > 0 && data.title.size() <= 150 &&
+        data.category is string && data.category.size() <= 60 &&
+        data.level in ['Beginner', 'Intermediate', 'Advanced', 'All Levels'] &&
+        data.instructor is string && data.instructor.size() <= 100 &&
+        data.createdBy is string && data.createdBy.size() <= 128 &&
+        (!('duration' in data) || (data.duration is string && data.duration.size() <= 50)) &&
+        (!('description' in data) || (data.description is string && data.description.size() <= 4000)) &&
+        (!('thumbnail' in data) || (data.thumbnail is string && data.thumbnail.size() <= 1000));
+    }
+
+    function isValidVideo(data) {
+      return data.keys().hasAll(['id', 'title', 'author', 'videoUrl', 'category', 'createdAt']) &&
+        data.id is string && data.id.size() <= 128 &&
+        data.title is string && data.title.size() > 0 && data.title.size() <= 150 &&
+        data.author is string && data.author.size() <= 100 &&
+        data.videoUrl is string && data.videoUrl.size() <= 500 &&
+        data.category is string && data.category.size() <= 60 &&
+        (!('description' in data) || (data.description is string && data.description.size() <= 2000)) &&
+        (!('img' in data) || (data.img is string && data.img.size() <= 1000));
+    }
+
+    function isValidTemple(data) {
+      return data.keys().hasAll(['id', 'name', 'city', 'country', 'createdAt']) &&
+        data.id is string && data.id.size() <= 128 &&
+        data.name is string && data.name.size() > 0 && data.name.size() <= 150 &&
+        data.city is string && data.city.size() <= 100 &&
+        data.country is string && data.country.size() <= 100 &&
+        (!('chiefMonk' in data) || (data.chiefMonk is string && data.chiefMonk.size() <= 100)) &&
+        (!('phone' in data) || (data.phone is string && data.phone.size() <= 30)) &&
+        (!('description' in data) || (data.description is string && data.description.size() <= 2000)) &&
+        (!('img' in data) || (data.img is string && data.img.size() <= 1000));
+    }
+
+    function isValidMonk(data) {
+      return data.keys().hasAll(['id', 'name', 'temple', 'country', 'createdAt']) &&
+        data.id is string && data.id.size() <= 128 &&
+        data.name is string && data.name.size() > 0 && data.name.size() <= 150 &&
+        data.temple is string && data.temple.size() <= 150 &&
+        data.country is string && data.country.size() <= 100 &&
+        (!('bio' in data) || (data.bio is string && data.bio.size() <= 3000)) &&
+        (!('phone' in data) || (data.phone is string && data.phone.size() <= 50)) &&
+        (!('tradition' in data) || (data.tradition is string && data.tradition.size() <= 100)) &&
+        (!('city' in data) || (data.city is string && data.city.size() <= 100)) &&
+        (!('loc' in data) || (data.loc is string && data.loc.size() <= 200)) &&
+        (!('img' in data) || (data.img is string && data.img.size() <= 1000));
+    }
+
+    function isValidFamousPerson(data) {
+      return data.keys().hasAll(['id', 'name', 'role', 'category', 'country', 'createdAt']) &&
+        data.id is string && data.id.size() <= 128 &&
+        data.name is string && data.name.size() > 0 && data.name.size() <= 150 &&
+        data.role is string && data.role.size() <= 150 &&
+        data.category is string && data.category.size() <= 60 &&
+        data.country is string && data.country.size() <= 100 &&
+        (!('bio' in data) || (data.bio is string && data.bio.size() <= 4000)) &&
+        (!('quote' in data) || (data.quote is string && data.quote.size() <= 1000)) &&
+        (!('img' in data) || (data.img is string && data.img.size() <= 1000)) &&
+        (!('cover' in data) || (data.cover is string && data.cover.size() <= 1000));
+    }
+
+    function isValidRestaurant(data) {
+      return data.keys().hasAll(['id', 'name', 'city', 'country', 'createdAt']) &&
+        data.id is string && data.id.size() <= 128 &&
+        data.name is string && data.name.size() > 0 && data.name.size() <= 150 &&
+        data.city is string && data.city.size() <= 100 &&
+        data.country is string && data.country.size() <= 100 &&
+        (!('phone' in data) || (data.phone is string && data.phone.size() <= 30)) &&
+        (!('type' in data) || (data.type is string && data.type.size() <= 100)) &&
+        (!('description' in data) || (data.description is string && data.description.size() <= 2000)) &&
+        (!('img' in data) || (data.img is string && data.img.size() <= 1000));
+    }
+
+    function isValidPost(data) {
+      return data.keys().hasAll(['id', 'author', 'authorId', 'content', 'createdAt']) &&
+        data.id is string && data.id.size() <= 128 &&
+        data.author is string && data.author.size() <= 100 &&
+        data.authorId is string && data.authorId.size() <= 128 &&
+        data.content is string && data.content.size() > 0 && data.content.size() <= 3000;
+    }
+
+    function isValidGroup(data) {
+      return data.keys().hasAll(['id', 'title', 'category', 'type', 'desc', 'createdAt']) &&
+        data.id is string && data.id.size() <= 128 &&
+        data.title is string && data.title.size() <= 100 &&
+        data.category is string && data.category.size() <= 60 &&
+        data.type is string && data.type.size() <= 30 &&
+        data.desc is string && data.desc.size() <= 1000;
+    }
+
+    function isValidReport(data) {
+      return data.keys().hasAll(['id', 'targetType', 'targetId', 'reporterId', 'reasonCategory', 'status', 'createdAt']) &&
+        data.id is string && data.id.size() <= 128 &&
+        data.targetType in ['Listing', 'Auction', 'User', 'Message', 'Event'] &&
+        data.targetId is string && data.targetId.size() <= 128 &&
+        data.reporterId is string && data.reporterId.size() <= 128 &&
+        data.reasonCategory is string && data.reasonCategory.size() <= 100 &&
+        data.status in ['Pending Review', 'Under Investigation', 'Resolved', 'Dismissed'] &&
+        (!('targetTitle' in data) || (data.targetTitle is string && data.targetTitle.size() <= 200)) &&
+        (!('reporterEmail' in data) || (data.reporterEmail is string && data.reporterEmail.size() <= 150)) &&
+        (!('reporterName' in data) || (data.reporterName is string && data.reporterName.size() <= 100)) &&
+        (!('details' in data) || (data.details is string && data.details.size() <= 2000));
+    }
+
+    // 1. User Profiles Collection
+    match /users/{userId} {
+      allow get: if isValidId(userId);
+      allow list: if isSignedIn();
+      allow create: if isValidId(userId) && isOwner(userId) && isValidUser(incoming()) &&
+        incoming().role == 'Member' &&
+        incoming().isBanned == false &&
+        incoming().isPhoneVerified == false;
+      allow update: if isValidId(userId) && isValidUser(incoming()) && (
+        isAdmin() ||
+        (isOwner(userId) &&
+          incoming().role == existing().role &&
+          incoming().isBanned == existing().isBanned &&
+          incoming().isPhoneVerified == existing().isPhoneVerified &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['name', 'phone', 'location', 'country', 'bio', 'skills', 'avatar', 'updatedAt']))
+      );
+      allow delete: if isValidId(userId) && isAdmin();
+    }
+
+    // 2. Admins Registry Collection
+    match /admins/{userId} {
+      allow read, write: if isValidId(userId) && isAdmin();
+    }
+
+    // 3. Site Settings (AdSense & Section Visibility)
+    match /site_settings/{settingId} {
+      allow read: if isValidId(settingId);
+      allow write: if isValidId(settingId) && isAdmin();
+    }
+
+    // 4. Classifieds and Auctions Collection
+    match /classifieds/{itemId} {
+      allow read: if isValidId(itemId);
+      allow create: if isValidId(itemId) && isSignedIn() && isValidClassified(incoming()) &&
+        incoming().sellerId == request.auth.uid;
+      allow update: if isValidId(itemId) && isValidClassified(incoming()) && (
+        isAdmin() ||
+        (isSignedIn() &&
+          existing().sellerId == request.auth.uid &&
+          incoming().sellerId == existing().sellerId &&
+          incoming().createdAt == existing().createdAt) ||
+        (isSignedIn() && incoming().diff(existing()).affectedKeys().hasOnly(['currentBid', 'bidsCount', 'highestBidder', 'offers', 'updatedAt']))
+      );
+      allow delete: if isValidId(itemId) && (isAdmin() || (isSignedIn() && existing().sellerId == request.auth.uid));
+    }
+
+    // 5. Events Collection
+    match /events/{eventId} {
+      allow read: if isValidId(eventId);
+      allow create: if isValidId(eventId) && isSignedIn() && isValidEvent(incoming()) &&
+        incoming().organizerId == request.auth.uid;
+      allow update: if isValidId(eventId) && isValidEvent(incoming()) && (
+        isAdmin() ||
+        (isSignedIn() &&
+          existing().organizerId == request.auth.uid &&
+          incoming().organizerId == existing().organizerId &&
+          incoming().createdAt == existing().createdAt) ||
+        (isSignedIn() && incoming().diff(existing()).affectedKeys().hasOnly(['attendeesCount', 'interested', 'updatedAt']))
+      );
+      allow delete: if isValidId(eventId) && (isAdmin() || (isSignedIn() && existing().organizerId == request.auth.uid));
+    }
+
+    // 6. Event RSVPs Collection
+    match /event_rsvps/{rsvpId} {
+      allow read: if isValidId(rsvpId);
+      allow create: if isValidId(rsvpId) && isSignedIn() && incoming().userId == request.auth.uid;
+      allow update, delete: if isValidId(rsvpId) && (isAdmin() || (isSignedIn() && existing().userId == request.auth.uid));
+    }
+
+    // 7. Buddhism Training Courses Collection
+    match /courses/{courseId} {
+      allow read: if isValidId(courseId);
+      allow create: if isValidId(courseId) && isSignedIn() && isValidCourse(incoming()) &&
+        incoming().createdBy == request.auth.uid;
+      allow update: if isValidId(courseId) && isValidCourse(incoming()) && (
+        isAdmin() ||
+        (isSignedIn() &&
+          existing().createdBy == request.auth.uid &&
+          incoming().createdBy == existing().createdBy &&
+          incoming().createdAt == existing().createdAt) ||
+        (isSignedIn() && incoming().diff(existing()).affectedKeys().hasOnly(['enrolledCount', 'rating', 'reviewsCount', 'updatedAt']))
+      );
+      allow delete: if isValidId(courseId) && (isAdmin() || (isSignedIn() && existing().createdBy == request.auth.uid));
+    }
+
+    // 8. Dhamma Videos Collection
+    match /videos/{videoId} {
+      allow read: if isValidId(videoId);
+      allow create: if isValidId(videoId) && isSignedIn() && isValidVideo(incoming());
+      allow update: if isValidId(videoId) && (
+        isAdmin() ||
+        (isSignedIn() && incoming().diff(existing()).affectedKeys().hasOnly(['likesCount', 'views', 'updatedAt']))
+      );
+      allow delete: if isValidId(videoId) && (isAdmin() || (isSignedIn() && existing().authorId == request.auth.uid));
+    }
+
+    // 9. Temples Collection
+    match /temples/{templeId} {
+      allow read: if isValidId(templeId);
+      allow create: if isValidId(templeId) && isSignedIn() && isValidTemple(incoming());
+      allow update: if isValidId(templeId) && (isAdmin() || (isSignedIn() && existing().createdBy == request.auth.uid));
+      allow delete: if isValidId(templeId) && isAdmin();
+    }
+
+    // 10. Monks Collection
+    match /monks/{monkId} {
+      allow read: if isValidId(monkId);
+      allow create: if isValidId(monkId) && isSignedIn() && isValidMonk(incoming());
+      allow update: if isValidId(monkId) && (isAdmin() || (isSignedIn() && existing().createdBy == request.auth.uid));
+      allow delete: if isValidId(monkId) && isAdmin();
+    }
+
+    // 11. Restaurants Collection
+    match /restaurants/{restaurantId} {
+      allow read: if isValidId(restaurantId);
+      allow create: if isValidId(restaurantId) && isSignedIn() && isValidRestaurant(incoming());
+      allow update: if isValidId(restaurantId) && (isAdmin() || (isSignedIn() && existing().createdBy == request.auth.uid));
+      allow delete: if isValidId(restaurantId) && isAdmin();
+    }
+
+    // 12. Community Feed Posts Collection
+    match /posts/{postId} {
+      allow read: if isValidId(postId);
+      allow create: if isValidId(postId) && isSignedIn() && isValidPost(incoming()) && incoming().authorId == request.auth.uid;
+      allow update: if isValidId(postId) && (
+        isAdmin() ||
+        (isSignedIn() && incoming().diff(existing()).affectedKeys().hasOnly(['likesCount', 'commentsCount', 'updatedAt']))
+      );
+      allow delete: if isValidId(postId) && (isAdmin() || (isSignedIn() && existing().authorId == request.auth.uid));
+    }
+
+    // 13. Community Groups Collection
+    match /groups/{groupId} {
+      allow read: if isValidId(groupId);
+      allow create: if isValidId(groupId) && isSignedIn() && isValidGroup(incoming());
+      allow update: if isValidId(groupId) && (
+        isAdmin() ||
+        (isSignedIn() && incoming().diff(existing()).affectedKeys().hasOnly(['membersCount', 'updatedAt']))
+      );
+      allow delete: if isValidId(groupId) && (isAdmin() || (isSignedIn() && existing().createdBy == request.auth.uid));
+    }
+
+    // 14. Platform Reports Collection
+    match /reports/{reportId} {
+      allow read: if isValidId(reportId) && isAdmin();
+      allow create: if isValidId(reportId) && isSignedIn() && isValidReport(incoming()) &&
+        incoming().reporterId == request.auth.uid;
+      allow update, delete: if isValidId(reportId) && isAdmin();
+    }
+
+    // 15. Famous People & Notable Personalities Collection
+    match /famous_people/{personId} {
+      allow read: if isValidId(personId);
+      allow create: if isValidId(personId) && isSignedIn() && isValidFamousPerson(incoming());
+      allow update: if isValidId(personId) && (isAdmin() || (isSignedIn() && existing().createdBy == request.auth.uid));
+      allow delete: if isValidId(personId) && isAdmin();
+    }
+  }
+}

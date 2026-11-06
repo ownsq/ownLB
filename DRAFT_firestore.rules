@@ -1,0 +1,198 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Hardened Global Helpers
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == 'damika1316@gmail.com' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Entity Validation Helpers
+    function isValidUser(data) {
+      return data.keys().hasAll(['id', 'name', 'email', 'role', 'isPhoneVerified', 'isBanned']) &&
+        data.id is string && data.id.size() <= 128 &&
+        data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+        data.email is string && data.email.size() > 0 && data.email.size() <= 150 &&
+        data.role in ['Super Admin', 'Moderator', 'Verified Seller', 'Member'] &&
+        data.isPhoneVerified is bool &&
+        data.isBanned is bool &&
+        (!('phone' in data) || (data.phone is string && data.phone.size() <= 30)) &&
+        (!('avatar' in data) || (data.avatar is string && data.avatar.size() <= 1000)) &&
+        (!('location' in data) || (data.location is string && data.location.size() <= 100)) &&
+        (!('notes' in data) || (data.notes is string && data.notes.size() <= 1000));
+    }
+
+    function isValidClassified(data) {
+      return data.keys().hasAll(['id', 'title', 'category', 'price', 'pricingType', 'sellerId', 'status', 'createdAt']) &&
+        data.id is string && data.id.size() <= 128 &&
+        data.title is string && data.title.size() > 0 && data.title.size() <= 150 &&
+        data.category is string && data.category.size() <= 60 &&
+        data.price is number && data.price >= 0 &&
+        data.pricingType in ['Fixed', 'Negotiable', 'Auction', 'Free'] &&
+        data.sellerId is string && data.sellerId.size() <= 128 &&
+        data.status in ['active', 'sold', 'ended', 'closed', 'flagged'] &&
+        (!('description' in data) || (data.description is string && data.description.size() <= 3000)) &&
+        (!('condition' in data) || (data.condition is string && data.condition.size() <= 50)) &&
+        (!('location' in data) || (data.location is string && data.location.size() <= 100)) &&
+        (!('sellerName' in data) || (data.sellerName is string && data.sellerName.size() <= 100)) &&
+        (!('sellerEmail' in data) || (data.sellerEmail is string && data.sellerEmail.size() <= 150)) &&
+        (!('sellerPhone' in data) || (data.sellerPhone is string && data.sellerPhone.size() <= 30));
+    }
+
+    function isValidEvent(data) {
+      return data.keys().hasAll(['id', 'title', 'date', 'location', 'organizer', 'organizerId', 'createdAt']) &&
+        data.id is string && data.id.size() <= 128 &&
+        data.title is string && data.title.size() > 0 && data.title.size() <= 150 &&
+        data.date is string && data.date.size() <= 50 &&
+        data.location is string && data.location.size() <= 200 &&
+        data.organizer is string && data.organizer.size() <= 100 &&
+        data.organizerId is string && data.organizerId.size() <= 128 &&
+        (!('time' in data) || (data.time is string && data.time.size() <= 50)) &&
+        (!('city' in data) || (data.city is string && data.city.size() <= 100)) &&
+        (!('category' in data) || (data.category is string && data.category.size() <= 50)) &&
+        (!('description' in data) || (data.description is string && data.description.size() <= 3000));
+    }
+
+    function isValidCourse(data) {
+      return data.keys().hasAll(['id', 'title', 'category', 'level', 'instructor', 'createdBy', 'createdAt']) &&
+        data.id is string && data.id.size() <= 128 &&
+        data.title is string && data.title.size() > 0 && data.title.size() <= 150 &&
+        data.category is string && data.category.size() <= 60 &&
+        data.level in ['Beginner', 'Intermediate', 'Advanced', 'All Levels'] &&
+        data.instructor is string && data.instructor.size() <= 100 &&
+        data.createdBy is string && data.createdBy.size() <= 128 &&
+        (!('duration' in data) || (data.duration is string && data.duration.size() <= 50)) &&
+        (!('description' in data) || (data.description is string && data.description.size() <= 4000)) &&
+        (!('thumbnail' in data) || (data.thumbnail is string && data.thumbnail.size() <= 1000));
+    }
+
+    function isValidReport(data) {
+      return data.keys().hasAll(['id', 'targetType', 'targetId', 'reporterId', 'reasonCategory', 'status', 'createdAt']) &&
+        data.id is string && data.id.size() <= 128 &&
+        data.targetType in ['Listing', 'Auction', 'User', 'Message', 'Event'] &&
+        data.targetId is string && data.targetId.size() <= 128 &&
+        data.reporterId is string && data.reporterId.size() <= 128 &&
+        data.reasonCategory is string && data.reasonCategory.size() <= 100 &&
+        data.status in ['Pending Review', 'Under Investigation', 'Resolved', 'Dismissed'] &&
+        (!('targetTitle' in data) || (data.targetTitle is string && data.targetTitle.size() <= 200)) &&
+        (!('reporterEmail' in data) || (data.reporterEmail is string && data.reporterEmail.size() <= 150)) &&
+        (!('reporterName' in data) || (data.reporterName is string && data.reporterName.size() <= 100)) &&
+        (!('details' in data) || (data.details is string && data.details.size() <= 2000));
+    }
+
+    // 1. User Profiles Collection
+    match /users/{userId} {
+      allow get: if isValidId(userId) && (isOwner(userId) || isAdmin());
+      allow list: if isAdmin();
+      allow create: if isValidId(userId) && isOwner(userId) && isValidUser(incoming()) &&
+        incoming().role == 'Member' &&
+        incoming().isBanned == false &&
+        incoming().isPhoneVerified == false;
+      allow update: if isValidId(userId) && isValidUser(incoming()) && (
+        isAdmin() ||
+        (isOwner(userId) &&
+          incoming().role == existing().role &&
+          incoming().isBanned == existing().isBanned &&
+          incoming().isPhoneVerified == existing().isPhoneVerified &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['name', 'phone', 'location', 'avatar', 'updatedAt']))
+      );
+      allow delete: if isValidId(userId) && isAdmin();
+    }
+
+    // 2. Admins Registry Collection
+    match /admins/{userId} {
+      allow read, write: if isValidId(userId) && isAdmin();
+    }
+
+    // 3. Site Settings (AdSense & Section Visibility)
+    match /site_settings/{settingId} {
+      allow read: if isValidId(settingId);
+      allow write: if isValidId(settingId) && isAdmin();
+    }
+
+    // 4. Classifieds and Auctions Collection
+    match /classifieds/{itemId} {
+      allow read: if isValidId(itemId);
+      allow create: if isValidId(itemId) && isSignedIn() && isValidClassified(incoming()) &&
+        incoming().sellerId == request.auth.uid;
+      allow update: if isValidId(itemId) && isValidClassified(incoming()) && (
+        isAdmin() ||
+        (isSignedIn() &&
+          existing().sellerId == request.auth.uid &&
+          incoming().sellerId == existing().sellerId &&
+          incoming().createdAt == existing().createdAt &&
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'title', 'category', 'description', 'price', 'pricingType',
+            'condition', 'location', 'sellerName', 'sellerEmail', 'sellerPhone', 'status', 'updatedAt'
+          ]))
+      );
+      allow delete: if isValidId(itemId) && (isAdmin() || (isSignedIn() && existing().sellerId == request.auth.uid));
+    }
+
+    // 5. Events Collection
+    match /events/{eventId} {
+      allow read: if isValidId(eventId);
+      allow create: if isValidId(eventId) && isSignedIn() && isValidEvent(incoming()) &&
+        incoming().organizerId == request.auth.uid;
+      allow update: if isValidId(eventId) && isValidEvent(incoming()) && (
+        isAdmin() ||
+        (isSignedIn() &&
+          existing().organizerId == request.auth.uid &&
+          incoming().organizerId == existing().organizerId &&
+          incoming().createdAt == existing().createdAt)
+      );
+      allow delete: if isValidId(eventId) && (isAdmin() || (isSignedIn() && existing().organizerId == request.auth.uid));
+    }
+
+    // 6. Buddhism Training Courses Collection
+    match /courses/{courseId} {
+      allow read: if isValidId(courseId);
+      allow create: if isValidId(courseId) && isSignedIn() && isValidCourse(incoming()) &&
+        incoming().createdBy == request.auth.uid;
+      allow update: if isValidId(courseId) && isValidCourse(incoming()) && (
+        isAdmin() ||
+        (isSignedIn() &&
+          existing().createdBy == request.auth.uid &&
+          incoming().createdBy == existing().createdBy &&
+          incoming().createdAt == existing().createdAt)
+      );
+      allow delete: if isValidId(courseId) && (isAdmin() || (isSignedIn() && existing().createdBy == request.auth.uid));
+    }
+
+    // 7. Platform Reports Collection
+    match /reports/{reportId} {
+      allow read: if isValidId(reportId) && isAdmin();
+      allow create: if isValidId(reportId) && isSignedIn() && isValidReport(incoming()) &&
+        incoming().reporterId == request.auth.uid;
+      allow update, delete: if isValidId(reportId) && isAdmin();
+    }
+  }
+}

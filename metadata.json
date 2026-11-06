@@ -1,0 +1,6 @@
+{
+  "name": "Sri Lankan Community Hub & Classified Auctions",
+  "description": "Peer-to-peer Sri Lankan community network, verified classified advertisements, and timed auctions with reserve pricing, anti-sniping soft close, and direct mutual contact.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

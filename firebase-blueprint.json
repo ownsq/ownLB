@@ -1,0 +1,361 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User account profile and authorization status in the portal",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 100 },
+        "email": { "type": "string", "maxLength": 150 },
+        "phone": { "type": "string", "maxLength": 30 },
+        "role": { "type": "string", "enum": ["Super Admin", "Moderator", "Verified Seller", "Member"] },
+        "isPhoneVerified": { "type": "boolean" },
+        "isBanned": { "type": "boolean" },
+        "banReason": { "type": "string", "maxLength": 500 },
+        "bannedAt": { "type": "number" },
+        "bannedDuration": { "type": "string", "maxLength": 50 },
+        "joinedDate": { "type": "string", "maxLength": 50 },
+        "avatar": { "type": "string", "maxLength": 1000 },
+        "location": { "type": "string", "maxLength": 100 },
+        "country": { "type": "string", "maxLength": 100 },
+        "bio": { "type": "string", "maxLength": 1000 },
+        "skills": { "type": "array" },
+        "notes": { "type": "string", "maxLength": 1000 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "email", "role", "isPhoneVerified", "isBanned"]
+    },
+    "AdminRecord": {
+      "title": "AdminRecord",
+      "description": "Trusted administrative privilege verification record",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 150 },
+        "role": { "type": "string", "enum": ["Super Admin", "Moderator"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "email", "role"]
+    },
+    "SiteSettings": {
+      "title": "SiteSettings",
+      "description": "Global portal configurations such as Google AdSense and Section Visibility",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 64 },
+        "adConfig": { "type": "object" },
+        "sectionConfig": { "type": "object" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "updatedBy": { "type": "string", "maxLength": 128 }
+      },
+      "required": ["id"]
+    },
+    "ClassifiedItem": {
+      "title": "ClassifiedItem",
+      "description": "Peer-to-peer Sri Lankan community classified listing or timed auction",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 150 },
+        "category": { "type": "string", "maxLength": 60 },
+        "description": { "type": "string", "maxLength": 3000 },
+        "price": { "type": "number" },
+        "pricingType": { "type": "string", "enum": ["Fixed", "Negotiable", "Auction", "Free"] },
+        "condition": { "type": "string", "maxLength": 50 },
+        "location": { "type": "string", "maxLength": 100 },
+        "sellerId": { "type": "string", "maxLength": 128 },
+        "sellerName": { "type": "string", "maxLength": 100 },
+        "sellerEmail": { "type": "string", "maxLength": 150 },
+        "sellerPhone": { "type": "string", "maxLength": 30 },
+        "img": { "type": "string", "maxLength": 1000 },
+        "status": { "type": "string", "enum": ["active", "sold", "ended", "closed", "flagged"] },
+        "currentBid": { "type": "number" },
+        "bidsCount": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "title", "category", "price", "pricingType", "sellerId", "status"]
+    },
+    "CommunityEvent": {
+      "title": "CommunityEvent",
+      "description": "Cultural, temple, and community events across the diaspora",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 150 },
+        "date": { "type": "string", "maxLength": 50 },
+        "time": { "type": "string", "maxLength": 50 },
+        "location": { "type": "string", "maxLength": 200 },
+        "city": { "type": "string", "maxLength": 100 },
+        "organizer": { "type": "string", "maxLength": 100 },
+        "category": { "type": "string", "maxLength": 50 },
+        "description": { "type": "string", "maxLength": 3000 },
+        "img": { "type": "string", "maxLength": 1000 },
+        "attendeesCount": { "type": "number" },
+        "organizerId": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "title", "date", "location", "organizer", "organizerId"]
+    },
+    "EventRsvp": {
+      "title": "EventRsvp",
+      "description": "RSVP registration for community events",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "eventId": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "userName": { "type": "string", "maxLength": 100 },
+        "userEmail": { "type": "string", "maxLength": 150 },
+        "guests": { "type": "number" },
+        "status": { "type": "string", "enum": ["confirmed", "waitlist", "cancelled"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "eventId", "userId", "userName", "userEmail", "status"]
+    },
+    "BuddhismCourse": {
+      "title": "BuddhismCourse",
+      "description": "Dhamma studies, meditation instructions, and Buddhist philosophy training courses",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 150 },
+        "category": { "type": "string", "maxLength": 60 },
+        "level": { "type": "string", "enum": ["Beginner", "Intermediate", "Advanced", "All Levels"] },
+        "duration": { "type": "string", "maxLength": 50 },
+        "instructor": { "type": "string", "maxLength": 100 },
+        "description": { "type": "string", "maxLength": 4000 },
+        "thumbnail": { "type": "string", "maxLength": 1000 },
+        "modulesCount": { "type": "number" },
+        "enrolledCount": { "type": "number" },
+        "rating": { "type": "number" },
+        "createdBy": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "title", "category", "level", "instructor", "createdBy"]
+    },
+    "VideoItem": {
+      "title": "VideoItem",
+      "description": "Dhamma sermon, chanting, or Buddhist educational video entry",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 150 },
+        "author": { "type": "string", "maxLength": 100 },
+        "authorId": { "type": "string", "maxLength": 128 },
+        "category": { "type": "string", "maxLength": 60 },
+        "videoUrl": { "type": "string", "maxLength": 500 },
+        "img": { "type": "string", "maxLength": 1000 },
+        "duration": { "type": "string", "maxLength": 30 },
+        "views": { "type": "string", "maxLength": 50 },
+        "description": { "type": "string", "maxLength": 2000 },
+        "isLive": { "type": "boolean" },
+        "likesCount": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "title", "author", "videoUrl", "category"]
+    },
+    "TempleItem": {
+      "title": "TempleItem",
+      "description": "Buddhist temple or monastery community entry",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 150 },
+        "city": { "type": "string", "maxLength": 100 },
+        "country": { "type": "string", "maxLength": 100 },
+        "loc": { "type": "string", "maxLength": 200 },
+        "address": { "type": "string", "maxLength": 300 },
+        "phone": { "type": "string", "maxLength": 30 },
+        "chiefMonk": { "type": "string", "maxLength": 100 },
+        "description": { "type": "string", "maxLength": 2000 },
+        "img": { "type": "string", "maxLength": 1000 },
+        "rating": { "type": "number" },
+        "createdBy": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "city", "country"]
+    },
+    "MonkItem": {
+      "title": "MonkItem",
+      "description": "Venerable monk registry and profile entry",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 150 },
+        "temple": { "type": "string", "maxLength": 150 },
+        "loc": { "type": "string", "maxLength": 200 },
+        "country": { "type": "string", "maxLength": 100 },
+        "city": { "type": "string", "maxLength": 100 },
+        "bio": { "type": "string", "maxLength": 2000 },
+        "img": { "type": "string", "maxLength": 1000 },
+        "phone": { "type": "string", "maxLength": 30 },
+        "tradition": { "type": "string", "maxLength": 60 },
+        "verified": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "temple", "country"]
+    },
+    "RestaurantItem": {
+      "title": "RestaurantItem",
+      "description": "Sri Lankan restaurant, grocery, or catering entry",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 150 },
+        "city": { "type": "string", "maxLength": 100 },
+        "country": { "type": "string", "maxLength": 100 },
+        "loc": { "type": "string", "maxLength": 200 },
+        "type": { "type": "string", "maxLength": 100 },
+        "price": { "type": "string", "maxLength": 10 },
+        "phone": { "type": "string", "maxLength": 30 },
+        "description": { "type": "string", "maxLength": 2000 },
+        "img": { "type": "string", "maxLength": 1000 },
+        "rating": { "type": "number" },
+        "verified": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "city", "country"]
+    },
+    "CommunityPost": {
+      "title": "CommunityPost",
+      "description": "Community feed update or discussion post",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "author": { "type": "string", "maxLength": 100 },
+        "authorId": { "type": "string", "maxLength": 128 },
+        "authorImg": { "type": "string", "maxLength": 1000 },
+        "content": { "type": "string", "maxLength": 3000 },
+        "loc": { "type": "string", "maxLength": 100 },
+        "likesCount": { "type": "number" },
+        "commentsCount": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "author", "authorId", "content"]
+    },
+    "CommunityGroup": {
+      "title": "CommunityGroup",
+      "description": "Special interest, cultural or Dhamma group",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 100 },
+        "category": { "type": "string", "maxLength": 60 },
+        "type": { "type": "string", "maxLength": 30 },
+        "desc": { "type": "string", "maxLength": 1000 },
+        "img": { "type": "string", "maxLength": 1000 },
+        "membersCount": { "type": "number" },
+        "createdBy": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "title", "category", "type", "desc"]
+    },
+    "PlatformReport": {
+      "title": "PlatformReport",
+      "description": "Platform grievance and violation reports",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "targetType": { "type": "string", "enum": ["Listing", "Auction", "User", "Message", "Event"] },
+        "targetId": { "type": "string", "maxLength": 128 },
+        "targetTitle": { "type": "string", "maxLength": 200 },
+        "reporterEmail": { "type": "string", "maxLength": 150 },
+        "reporterName": { "type": "string", "maxLength": 100 },
+        "reporterId": { "type": "string", "maxLength": 128 },
+        "reasonCategory": { "type": "string", "maxLength": 100 },
+        "details": { "type": "string", "maxLength": 2000 },
+        "status": { "type": "string", "enum": ["Pending Review", "Under Investigation", "Resolved", "Dismissed"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "targetType", "targetId", "reporterId", "reasonCategory", "status"]
+    },
+    "FamousPersonItem": {
+      "title": "FamousPersonItem",
+      "description": "Notable Sri Lankan cultural icons, musicians, scholars, and achievers",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 150 },
+        "role": { "type": "string", "maxLength": 150 },
+        "country": { "type": "string", "maxLength": 100 },
+        "category": { "type": "string", "maxLength": 60 },
+        "img": { "type": "string", "maxLength": 1000 },
+        "cover": { "type": "string", "maxLength": 1000 },
+        "bio": { "type": "string", "maxLength": 3000 },
+        "quote": { "type": "string", "maxLength": 1000 },
+        "followers": { "type": "string", "maxLength": 50 },
+        "rating": { "type": "number" },
+        "verified": { "type": "boolean" },
+        "available": { "type": "boolean" },
+        "createdBy": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "role", "category", "country"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profiles and permissions"
+    },
+    "/admins/{userId}": {
+      "schema": "AdminRecord",
+      "description": "Admin authorization registry"
+    },
+    "/site_settings/{settingId}": {
+      "schema": "SiteSettings",
+      "description": "Global ad and section toggle settings"
+    },
+    "/classifieds/{itemId}": {
+      "schema": "ClassifiedItem",
+      "description": "Marketplace classified listings and auction entries"
+    },
+    "/events/{eventId}": {
+      "schema": "CommunityEvent",
+      "description": "Community events calendar entries"
+    },
+    "/event_rsvps/{rsvpId}": {
+      "schema": "EventRsvp",
+      "description": "RSVP registration entries for community events"
+    },
+    "/courses/{courseId}": {
+      "schema": "BuddhismCourse",
+      "description": "Dhamma training and Buddhist study courses"
+    },
+    "/videos/{videoId}": {
+      "schema": "VideoItem",
+      "description": "Curated and user-submitted Dhamma sermons and videos"
+    },
+    "/temples/{templeId}": {
+      "schema": "TempleItem",
+      "description": "Buddhist temple and monastery directory entries"
+    },
+    "/monks/{monkId}": {
+      "schema": "MonkItem",
+      "description": "Venerable monks directory and invitation profiles"
+    },
+    "/restaurants/{restaurantId}": {
+      "schema": "RestaurantItem",
+      "description": "Sri Lankan restaurants and dining directory"
+    },
+    "/posts/{postId}": {
+      "schema": "CommunityPost",
+      "description": "Community feed and member discussion posts"
+    },
+    "/groups/{groupId}": {
+      "schema": "CommunityGroup",
+      "description": "Community groups and interest circles"
+    },
+    "/reports/{reportId}": {
+      "schema": "PlatformReport",
+      "description": "Platform grievance and violation reports"
+    },
+    "/famous_people/{personId}": {
+      "schema": "FamousPersonItem",
+      "description": "Notable personalities and cultural icons directory"
+    }
+  }
+}
