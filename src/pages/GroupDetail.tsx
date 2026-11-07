@@ -12,6 +12,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { EventDetailModal } from '../components/events/EventDetailModal';
 import { InteractiveEntityMap } from '../components/maps/InteractiveEntityMap';
 import { getCoordinatesForLocation } from '../utils/googleMapsConfig';
+import { subscribePosts, addPostToDb, subscribeEvents, subscribeUsers } from '../lib/firestoreService';
 
 interface GroupPost {
   id: string;
@@ -68,48 +69,37 @@ export function GroupDetail() {
 
   // Feed posts state
   const [newPostText, setNewPostText] = useState('');
-  const [feedPosts, setFeedPosts] = useState<GroupPost[]>([
-    {
-      id: 'p-1',
-      author: 'Venerable Rathana Thero',
-      authorRole: 'Admin',
-      avatar: 'https://i.pravatar.cc/150?u=rathana',
-      time: '3 days ago',
-      content: 'Join us for a special Vesak celebration and Dhamma talk by Ven. Rathana Thero. All are welcome with family and friends.',
-      likes: 24,
-      commentsCount: 8,
-      liked: false
-    },
-    {
-      id: 'p-2',
-      author: 'Kavindu Senanayake',
-      avatar: 'https://i.pravatar.cc/150?u=kavindu2',
-      time: 'Yesterday',
-      content: 'Sadhu Sadhu! The youth meditation session yesterday was deeply peaceful. Thank you to everyone who organized the alms giving.',
-      likes: 12,
-      commentsCount: 3,
-      liked: true
-    }
-  ]);
+  const [dbPosts, setDbPosts] = useState<any[]>([]);
+  const [dbUsers, setDbUsers] = useState<any[]>([]);
+  const [dbEvents, setDbEvents] = useState<any[]>([]);
 
-  // Events list state
-  const [eventsList, setEventsList] = useState([
-    { id: 'e1', date: "MAY 25", title: "Vesak Festival Celebration", time: "May 25, 2025 • 6:00 PM", loc: "Sri Lanka Buddhist Temple", going: true },
-    { id: 'e2', date: "JUN 08", title: "Dhamma Talk by Ven. Rathana Thero", time: "Jun 8, 2025 • 6:30 PM", loc: "Temple Community Hall", going: false },
-    { id: 'e3', date: "JUN 15", title: "Meditation Workshop", time: "Jun 15, 2025 • 9:00 AM", loc: "Meditation Center, Los Angeles", going: false },
-  ]);
+  React.useEffect(() => {
+    const unsubP = subscribePosts((posts) => setDbPosts(posts));
+    const unsubU = subscribeUsers((users) => setDbUsers(users));
+    const unsubE = subscribeEvents((events) => setDbEvents(events));
+    return () => {
+      unsubP();
+      unsubU();
+      unsubE();
+    };
+  }, []);
+
+  const groupFeedPosts = dbPosts.filter(p => 
+    (p.group && group.title && p.group.toLowerCase() === group.title.toLowerCase()) ||
+    (p.group && id && p.group.toLowerCase().includes(id.toLowerCase()))
+  );
 
   // Files list state
   const [filesList, setFilesList] = useState([
     { name: "Group Guidelines.pdf", size: "245 KB", type: "PDF" },
-    { name: "Event Schedule 2024.xlsx", size: "1.2 MB", type: "Excel" },
-    { name: "Meeting Minutes - May.docx", size: "560 KB", type: "Word" },
+    { name: "Event Schedule.xlsx", size: "1.2 MB", type: "Excel" },
+    { name: "Community Guidelines.docx", size: "560 KB", type: "Word" },
   ]);
 
   // Albums state
   const [albumsList, setAlbumsList] = useState([
-    { name: "Vesak 2024", count: 45, img: "https://images.unsplash.com/photo-1596422846543-75c6fc197f0a?auto=format&fit=crop&q=80&w=400" },
-    { name: "Temple Visit", count: 12, img: "https://images.unsplash.com/photo-1518002171953-a080ee817e1f?auto=format&fit=crop&q=80&w=400" },
+    { name: "Vesak Puja", count: 45, img: "https://images.unsplash.com/photo-1596422846543-75c6fc197f0a?auto=format&fit=crop&q=80&w=400" },
+    { name: "Temple Dhamma Day", count: 12, img: "https://images.unsplash.com/photo-1518002171953-a080ee817e1f?auto=format&fit=crop&q=80&w=400" },
     { name: "Dhamma School", count: 28, img: "https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&q=80&w=400" },
   ]);
 
@@ -127,46 +117,48 @@ export function GroupDetail() {
     }
   };
 
-  const handlePostSubmit = (e: React.FormEvent) => {
+  const handlePostSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newPostText.trim()) return;
-    const newPost: GroupPost = {
-      id: `p-${Date.now()}`,
-      author: user?.name || "Saminda Fernando",
-      avatar: user?.avatar || "https://i.pravatar.cc/150?u=current",
+    const newPostPayload = {
+      author: user?.name || "Community Member",
+      authorImg: user?.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200",
       time: "Just now",
       content: newPostText.trim(),
-      likes: 0,
-      commentsCount: 0,
-      liked: false
+      group: group.title,
+      loc: user?.country || "Sri Lanka",
+      createdAt: new Date().toISOString()
     };
-    setFeedPosts([newPost, ...feedPosts]);
-    setNewPostText('');
-    showToast("Post shared to group feed!");
+    try {
+      await addPostToDb(newPostPayload);
+      setNewPostText('');
+      showToast("Post shared to group feed!");
+    } catch (err) {
+      console.error("Failed to post to group feed:", err);
+      showToast("Unable to post to group feed.");
+    }
   };
 
-  const togglePostLike = (id: string) => {
-    setFeedPosts(feedPosts.map(p => {
-      if (p.id === id) {
-        return {
-          ...p,
-          liked: !p.liked,
-          likes: p.liked ? p.likes - 1 : p.likes + 1
-        };
-      }
-      return p;
-    }));
+  const [rsvpdEventIds, setRsvpdEventIds] = useState<Record<string, boolean>>({});
+
+  const groupEvents = dbEvents.map(e => ({
+    id: e.id,
+    date: e.date || "Upcoming",
+    title: e.title,
+    time: e.time ? `${e.date} • ${e.time}` : `${e.date || 'Upcoming'} • Evening`,
+    loc: e.location || e.city || "Temple Community Hall",
+    going: !!rsvpdEventIds[e.id]
+  }));
+
+  const togglePostLike = (_id: string) => {
+    showToast("Liked post!");
   };
 
   const toggleEventGoing = (id: string) => {
-    setEventsList(eventsList.map(e => {
-      if (e.id === id) {
-        const nextState = !e.going;
-        showToast(nextState ? `You are going to "${e.title}"!` : `Cancelled RSVP for "${e.title}".`);
-        return { ...e, going: nextState };
-      }
-      return e;
-    }));
+    const nextState = !rsvpdEventIds[id];
+    setRsvpdEventIds(prev => ({ ...prev, [id]: nextState }));
+    const target = groupEvents.find(e => e.id === id);
+    showToast(nextState ? `You are attending "${target?.title || 'Event'}"!` : `Cancelled RSVP for "${target?.title || 'Event'}".`);
   };
 
   const handleSaveGroupEdit = (e: React.FormEvent) => {
@@ -277,28 +269,32 @@ export function GroupDetail() {
             </div>
             <p className="text-xs text-neutral-500">Invite connections to {group.title}:</p>
             <div className="space-y-2.5 max-h-60 overflow-y-auto">
-              {[
-                { name: "Sahan Jayasekara", role: "Software Engineer", loc: "Tokyo" },
-                { name: "Rashmi De Silva", role: "Student", loc: "London" },
-                { name: "Nadeesha Perera", role: "Designer", loc: "Melbourne" },
-                { name: "Tharindu Senarathne", role: "Entrepreneur", loc: "London" },
-              ].map((person, i) => (
-                <div key={i} className="flex items-center justify-between p-2.5 border border-neutral-100 rounded-xl hover:bg-neutral-50">
-                  <div className="flex items-center gap-2.5">
-                    <img src={`https://i.pravatar.cc/150?u=inv${i}`} alt="" className="w-9 h-9 rounded-full object-cover" />
-                    <div>
-                      <h4 className="font-bold text-xs text-neutral-900">{person.name}</h4>
-                      <p className="text-[10px] text-neutral-500">{person.role} • {person.loc}</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => showToast(`Invitation sent to ${person.name}!`)}
-                    className="px-3 py-1 bg-amber-50 hover:bg-amber-100 text-amber-700 text-[11px] font-bold rounded-lg border border-amber-200"
-                  >
-                    Invite
-                  </button>
+              {dbUsers.filter(u => u.id !== user?.id && u.uid !== user?.id).length === 0 ? (
+                <div className="text-center py-6 text-neutral-400 text-xs">
+                  No other members found to invite yet. Share this group link with your community friends.
                 </div>
-              ))}
+              ) : (
+                dbUsers
+                  .filter(u => u.id !== user?.id && u.uid !== user?.id)
+                  .slice(0, 6)
+                  .map((person, i) => (
+                    <div key={person.id || person.uid || i} className="flex items-center justify-between p-2.5 border border-neutral-100 rounded-xl hover:bg-neutral-50">
+                      <div className="flex items-center gap-2.5">
+                        <img src={person.avatar || person.photoURL || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200"} alt="" className="w-9 h-9 rounded-full object-cover" />
+                        <div>
+                          <h4 className="font-bold text-xs text-neutral-900">{person.name || person.displayName || "Member"}</h4>
+                          <p className="text-[10px] text-neutral-500">{person.role || "Member"} • {person.location || person.country || "Community"}</p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => showToast(`Invitation sent to ${person.name || "member"}!`)}
+                        className="px-3 py-1 bg-amber-50 hover:bg-amber-100 text-amber-700 text-[11px] font-bold rounded-lg border border-amber-200 cursor-pointer"
+                      >
+                        Invite
+                      </button>
+                    </div>
+                  ))
+              )}
             </div>
             <button
               onClick={() => {
@@ -444,7 +440,7 @@ export function GroupDetail() {
               {/* Create Post */}
               <form onSubmit={handlePostSubmit} className="bg-white rounded-2xl border border-neutral-200 p-4 shadow-xs">
                 <div className="flex gap-3 mb-3">
-                  <img src={user?.avatar || "https://i.pravatar.cc/150?u=current"} alt="User" className="w-10 h-10 rounded-full object-cover" />
+                  <img src={user?.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200"} alt="User" className="w-10 h-10 rounded-full object-cover" />
                   <textarea 
                     rows={2}
                     value={newPostText}
@@ -488,40 +484,45 @@ export function GroupDetail() {
               </form>
 
               {/* Feed Posts */}
-              {feedPosts.map((post) => (
-                <div key={post.id} className="bg-white rounded-2xl border border-neutral-200 p-5 shadow-xs space-y-3">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
-                      <img src={post.avatar} alt={post.author} className="w-10 h-10 rounded-full object-cover" />
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <h4 className="font-bold text-xs text-neutral-900">{post.author}</h4>
-                          {post.authorRole && (
-                            <span className="bg-blue-50 text-blue-700 text-[10px] font-bold px-2 py-0.5 rounded-full border border-blue-100">
-                              {post.authorRole}
-                            </span>
-                          )}
+              {groupFeedPosts.length === 0 ? (
+                <div className="bg-white rounded-2xl border border-dashed border-neutral-200 p-8 text-center space-y-2">
+                  <MessageSquare className="w-8 h-8 text-neutral-300 mx-auto" />
+                  <h4 className="font-bold text-sm text-neutral-800">No posts in this group yet</h4>
+                  <p className="text-xs text-neutral-500 max-w-sm mx-auto">
+                    Share an announcement, event update, or Dhamma reflection with the group members above.
+                  </p>
+                </div>
+              ) : (
+                groupFeedPosts.map((post) => (
+                  <div key={post.id} className="bg-white rounded-2xl border border-neutral-200 p-5 shadow-xs space-y-3">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-3">
+                        <img src={post.authorImg || post.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200"} alt={post.author} className="w-10 h-10 rounded-full object-cover" />
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-bold text-xs text-neutral-900">{post.author}</h4>
+                            {post.authorRole && (
+                              <span className="bg-blue-50 text-blue-700 text-[10px] font-bold px-2 py-0.5 rounded-full border border-blue-100">
+                                {post.authorRole}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[10px] text-neutral-400">{post.time || "Recently"}</p>
                         </div>
-                        <p className="text-[10px] text-neutral-400">{post.time}</p>
                       </div>
                     </div>
+                    <p className="text-xs text-neutral-800 leading-relaxed">{post.content}</p>
+                    <div className="flex items-center justify-between pt-2 border-t border-neutral-100 text-xs text-neutral-500">
+                      <span className="flex items-center gap-1 font-semibold text-neutral-600">
+                        <ThumbsUp className="w-3.5 h-3.5" /> {post.likesCount || 0} Likes
+                      </span>
+                      <span className="flex items-center gap-1 text-[11px]">
+                        <MessageSquare className="w-3.5 h-3.5" /> {post.commentsCount || 0} Comments
+                      </span>
+                    </div>
                   </div>
-                  <p className="text-xs text-neutral-800 leading-relaxed">{post.content}</p>
-                  <div className="flex items-center justify-between pt-2 border-t border-neutral-100 text-xs text-neutral-500">
-                    <button 
-                      onClick={() => togglePostLike(post.id)}
-                      className={`flex items-center gap-1 font-semibold transition-colors ${
-                        post.liked ? "text-amber-600 font-bold" : "hover:text-amber-600"
-                      }`}
-                    >
-                      <ThumbsUp className="w-3.5 h-3.5" /> {post.likes} Likes
-                    </button>
-                    <span className="flex items-center gap-1 text-[11px]">
-                      <MessageSquare className="w-3.5 h-3.5" /> {post.commentsCount} Comments
-                    </span>
-                  </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           )}
 
@@ -550,23 +551,29 @@ export function GroupDetail() {
                 </button>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {[1, 2, 3, 4, 5, 6].map((idx) => (
-                  <div key={idx} className="flex items-center justify-between p-3 border border-neutral-100 rounded-xl hover:bg-neutral-50">
-                    <div className="flex items-center gap-2.5">
-                      <img src={`https://i.pravatar.cc/150?u=gm${idx}`} alt="" className="w-9 h-9 rounded-full object-cover" />
-                      <div>
-                        <h4 className="font-bold text-xs text-neutral-900">Member {idx}</h4>
-                        <p className="text-[10px] text-neutral-400">Joined 2024</p>
-                      </div>
-                    </div>
-                    <button 
-                      onClick={() => showToast(`Direct messaging Member ${idx}...`)}
-                      className="px-2.5 py-1 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 rounded-lg text-[10px] font-bold"
-                    >
-                      Message
-                    </button>
+                {dbUsers.length === 0 ? (
+                  <div className="col-span-2 text-center py-6 text-neutral-400 text-xs">
+                    No members registered in this chapter yet.
                   </div>
-                ))}
+                ) : (
+                  dbUsers.slice(0, 8).map((memberUser, idx) => (
+                    <div key={memberUser.id || memberUser.uid || idx} className="flex items-center justify-between p-3 border border-neutral-100 rounded-xl hover:bg-neutral-50">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <img src={memberUser.avatar || memberUser.photoURL || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200"} alt="" className="w-9 h-9 rounded-full object-cover shrink-0" />
+                        <div className="min-w-0">
+                          <h4 className="font-bold text-xs text-neutral-900 truncate">{memberUser.name || memberUser.displayName || "Member"}</h4>
+                          <p className="text-[10px] text-neutral-400 truncate">{memberUser.location || memberUser.country || "Active Member"}</p>
+                        </div>
+                      </div>
+                      <Link 
+                        to="/directory?view=messages"
+                        className="px-2.5 py-1 bg-neutral-100 hover:bg-neutral-200 text-neutral-700 rounded-lg text-[10px] font-bold shrink-0"
+                      >
+                        Message
+                      </Link>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           )}
@@ -607,10 +614,21 @@ export function GroupDetail() {
                 </div>
               </div>
 
-              {eventsViewMode === 'map' ? (
+              {groupEvents.length === 0 ? (
+                <div className="bg-white rounded-2xl border border-dashed border-neutral-200 p-8 text-center space-y-2">
+                  <Calendar className="w-8 h-8 text-neutral-300 mx-auto" />
+                  <h4 className="font-bold text-sm text-neutral-800">No events scheduled for this group yet</h4>
+                  <p className="text-xs text-neutral-500 max-w-sm mx-auto">
+                    Plan a gathering, Vesak festival, or Dhamma discussion for your group members.
+                  </p>
+                  <Link to="/events" className="inline-block mt-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs">
+                    Explore & Post Events
+                  </Link>
+                </div>
+              ) : eventsViewMode === 'map' ? (
                 <div className="h-[460px] w-full rounded-xl overflow-hidden border border-neutral-200">
                   <InteractiveEntityMap
-                    items={eventsList.map(e => {
+                    items={groupEvents.map(e => {
                       const coords = getCoordinatesForLocation(e.loc);
                       return {
                         id: e.id,
@@ -627,7 +645,7 @@ export function GroupDetail() {
                     height="100%"
                     defaultZoom={11}
                     onItemClick={(item) => {
-                      const matched = eventsList.find(e => String(e.id) === String(item.id));
+                      const matched = groupEvents.find(e => String(e.id) === String(item.id));
                       if (matched) {
                         setSelectedEventForModal({
                           id: matched.id,
@@ -645,7 +663,7 @@ export function GroupDetail() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {eventsList.map((evt) => (
+                  {groupEvents.map((evt) => (
                     <div 
                       key={evt.id} 
                       onClick={() => setSelectedEventForModal({

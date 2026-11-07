@@ -39,21 +39,21 @@ export function DigitalCardsManagerModal({
   // Form state for creating or editing
   const [formData, setFormData] = useState<Partial<DigitalCard>>({
     type: "professional",
-    name: "Saminda Fernando",
-    title: "Senior Solutions Architect",
-    company: "Lanka Global Innovations Inc.",
+    name: "Damika",
+    title: "Community Coordinator & Professional",
+    company: "Lanka Buddhist Global Network",
     bio: "Practicing Theravada Buddhist, bridging global technology with community seva.",
-    phone: "+1 (310) 555-0198",
-    email: "saminda.fernando@lankaglobal.com",
-    whatsapp: "+13105550198",
-    website: "https://lankaglobal.com",
-    location: "Los Angeles, CA, USA",
-    avatar: "https://images.unsplash.com/photo-1599566150163-29194dcaad36?auto=format&fit=crop&q=80&w=300",
+    phone: "",
+    email: currentUserEmail,
+    whatsapp: "",
+    website: "https://lankabuddhist.com",
+    location: "Global",
+    avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=300",
     themeColor: "orange",
     socialLinks: {
-      linkedin: "https://linkedin.com/in/saminda-fernando",
+      linkedin: "",
       twitter: "",
-      github: "https://github.com/saminda-f"
+      github: ""
     },
     isActive: true
   });
@@ -68,16 +68,16 @@ export function DigitalCardsManagerModal({
     setEditingCard(null);
     setFormData({
       type,
-      name: "Saminda Fernando",
+      name: "Damika",
       title: type === "professional" ? "Professional Consultant" : "Community Volunteer",
       company: type === "professional" ? "Global Enterprise" : "Buddhist Community Network",
       bio: "Connecting and serving the Sri Lankan diaspora worldwide.",
-      phone: "+1 (310) 555-0198",
+      phone: "",
       email: currentUserEmail,
-      whatsapp: "+13105550198",
+      whatsapp: "",
       website: "https://lankabuddhist.com",
-      location: "Los Angeles, CA, USA",
-      avatar: "https://images.unsplash.com/photo-1599566150163-29194dcaad36?auto=format&fit=crop&q=80&w=300",
+      location: "Global",
+      avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=300",
       themeColor: type === "professional" ? "orange" : "emerald",
       socialLinks: {
         linkedin: "",

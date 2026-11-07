@@ -30,57 +30,7 @@ export interface EventInvitation {
 
 const INVITATIONS_STORAGE_KEY = "lanka_ceremony_event_invitations_v1";
 
-const DEFAULT_INVITATIONS: EventInvitation[] = [
-  {
-    id: "inv-monk-1",
-    targetType: "monk",
-    targetId: 1,
-    targetName: "Ven. Galigamuwe Gnanadeepa Thero",
-    targetAvatar: "https://images.unsplash.com/photo-1544837332-9c1251917f18?auto=format&fit=crop&q=80&w=300",
-    senderId: "damika1316@gmail.com",
-    senderName: "Saminda Fernando",
-    senderEmail: "damika1316@gmail.com",
-    senderPhone: "+1 (310) 555-0198",
-    eventTitle: "Annual Vesak Dhamma Sermon & Metta Meditation",
-    eventType: "Bana Program (Dhamma Sermon)",
-    date: "May 25, 2025",
-    time: "6:30 PM",
-    location: "Sri Lanka Buddhist Vihara, Los Angeles, USA",
-    isOnline: false,
-    expectedAudience: "150-250 Devotees",
-    transportProvided: true,
-    transportDetails: "Temple vehicle pickup from residence at 5:30 PM, return transport provided.",
-    danaOrHonorariumNotes: "Evening Gilanpasa alms and Navakatha offerings prepared.",
-    participationArrangements: "Dhamma sermon on mindfulness in family life followed by 20 minutes of guided loving-kindness meditation and devotee blessing pirith.",
-    specialNotes: "Devotees will observe Ata Sil throughout the morning.",
-    status: "accepted",
-    createdAt: "Apr 20, 2025",
-    respondedAt: "Apr 22, 2025"
-  },
-  {
-    id: "inv-famous-2",
-    targetType: "famous_person",
-    targetId: 2,
-    targetName: "Bathiya & Santhush (BNS)",
-    targetAvatar: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&q=80&w=300",
-    senderId: "damika1316@gmail.com",
-    senderName: "Saminda Fernando",
-    senderEmail: "damika1316@gmail.com",
-    senderPhone: "+1 (310) 555-0198",
-    eventTitle: "Vesak Devotional Choral & Youth Cultural Festival",
-    eventType: "Cultural & Devotional Evening",
-    date: "Jun 01, 2025",
-    time: "7:00 PM",
-    location: "Pasadena Civic Auditorium, CA, USA",
-    isOnline: false,
-    expectedAudience: "500-800 Attendees",
-    transportProvided: true,
-    transportDetails: "Executive van transport provided from hotel to venue.",
-    participationArrangements: "Special guest acoustic devotional performance of classical Buddhist songs and greeting the youth gathering.",
-    status: "pending",
-    createdAt: "May 10, 2025"
-  }
-];
+const DEFAULT_INVITATIONS: EventInvitation[] = [];
 
 export function getAllInvitations(): EventInvitation[] {
   try {

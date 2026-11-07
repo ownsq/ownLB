@@ -43,7 +43,7 @@ export const DEFAULT_MANAGED_USERS: ManagedUser[] = [
     isPhoneVerified: true,
     isBanned: false,
     joinedDate: "Feb 2024",
-    avatar: "https://i.pravatar.cc/150?u=kasun",
+    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=200",
     location: "Melbourne, Australia",
     notes: "Verified antique furniture & tea merchant"
   },
@@ -56,7 +56,7 @@ export const DEFAULT_MANAGED_USERS: ManagedUser[] = [
     isPhoneVerified: true,
     isBanned: false,
     joinedDate: "Mar 2024",
-    avatar: "https://i.pravatar.cc/150?u=dilini",
+    avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=200",
     location: "Sydney, Australia"
   },
   {
@@ -68,7 +68,7 @@ export const DEFAULT_MANAGED_USERS: ManagedUser[] = [
     isPhoneVerified: true,
     isBanned: false,
     joinedDate: "Apr 2024",
-    avatar: "https://i.pravatar.cc/150?u=shantha",
+    avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=200",
     location: "Kandy, Sri Lanka",
     notes: "Community moderator & event organizer"
   },
@@ -84,7 +84,7 @@ export const DEFAULT_MANAGED_USERS: ManagedUser[] = [
     bannedAt: Date.now() - 5 * 86400 * 1000,
     bannedDuration: "Indefinite",
     joinedDate: "May 2024",
-    avatar: "https://i.pravatar.cc/150?u=bot",
+    avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=200",
     location: "Unknown",
     notes: "Flagged by anti-fraud heuristic filter"
   }
@@ -159,7 +159,7 @@ export function addManagedUser(userData: Omit<ManagedUser, "id" | "joinedDate">)
     ...userData,
     id: `usr-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
     joinedDate,
-    avatar: userData.avatar || `https://i.pravatar.cc/150?u=${encodeURIComponent(userData.email || userData.name)}`
+    avatar: userData.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200"
   };
 
   const updated = [newUser, ...users];

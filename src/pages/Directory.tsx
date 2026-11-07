@@ -27,10 +27,20 @@ import { DigitalCardsManagerModal } from "../components/cards/DigitalCardsManage
 import { InvitationsManagerModal } from "../components/invitations/InvitationsManagerModal";
 import { GoogleAdSense } from "../components/ads/GoogleAdSense";
 import { useSectionConfig, SectionGuard, SectionKey } from "../contexts/SectionContext";
-import { subscribeEvents, subscribeTemples, subscribeGroups, subscribeUsers } from "../lib/firestoreService";
+import { 
+  subscribeEvents, 
+  subscribeTemples, 
+  subscribeGroups, 
+  subscribeUsers, 
+  subscribeDiscussions, 
+  subscribePosts,
+  subscribeNotifications,
+  AppNotification
+} from "../lib/firestoreService";
 import { getCoordinatesForLocation } from "../utils/googleMapsConfig";
 
 export function Directory() {
+  const { user } = useAuth();
   const [toastMessage, setToastMessage] = useState("");
   const [isCreateGroupModalOpen, setIsCreateGroupModalOpen] = useState(false);
   const [newGroupForm, setNewGroupForm] = useState({ title: '', desc: '', type: 'Public Group' });
@@ -44,19 +54,28 @@ export function Directory() {
   const [dbTemples, setDbTemples] = useState<any[]>([]);
   const [dbGroups, setDbGroups] = useState<any[]>([]);
   const [dbUsers, setDbUsers] = useState<any[]>([]);
+  const [dbDiscussions, setDbDiscussions] = useState<any[]>([]);
+  const [dbPosts, setDbPosts] = useState<any[]>([]);
+  const [dbNotifications, setDbNotifications] = useState<AppNotification[]>([]);
 
   useEffect(() => {
     const unsubE = subscribeEvents((list) => setDbEvents(list));
     const unsubT = subscribeTemples((list) => setDbTemples(list));
     const unsubG = subscribeGroups((list) => setDbGroups(list));
     const unsubU = subscribeUsers((list) => setDbUsers(list));
+    const unsubD = subscribeDiscussions((list) => setDbDiscussions(list));
+    const unsubP = subscribePosts((list) => setDbPosts(list));
+    const unsubN = subscribeNotifications((list) => setDbNotifications(list), user?.uid);
     return () => {
       unsubE();
       unsubT();
       unsubG();
       unsubU();
+      unsubD();
+      unsubP();
+      unsubN();
     };
-  }, []);
+  }, [user]);
 
   // Compute dynamic global map markers from live database
   const communityGlobalItems = useMemo(() => {
@@ -137,7 +156,6 @@ export function Directory() {
     showToast(next ? `RSVP confirmed for "${key}"!` : `RSVP cancelled for "${key}".`);
   };
 
-  const { user } = useAuth();
   const { adConfig } = useAd();
   const { isSectionEnabled } = useSectionConfig();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -245,85 +263,90 @@ export function Directory() {
           <div className="bg-white rounded-xl border border-neutral-200 overflow-hidden">
             <div className="p-5 flex flex-col items-center text-center border-b border-neutral-100">
               <div className="relative mb-3">
-                <img referrerPolicy="no-referrer" src={user?.avatar || "https://i.pravatar.cc/150?u=saminda"} alt={user?.name} className="w-16 h-16 rounded-full border-2 border-white shadow-sm" />
+                <img referrerPolicy="no-referrer" src={user?.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200"} alt={user?.name} className="w-16 h-16 rounded-full border-2 border-white shadow-sm object-cover" />
                 <div className="absolute bottom-0 right-0 w-4 h-4 bg-emerald-500 border-2 border-white rounded-full"></div>
               </div>
-              <h3 className="font-bold text-neutral-900">{user?.name || "Saminda Fernando"}</h3>
+              <h3 className="font-bold text-neutral-900">{user?.name || "Community Member"}</h3>
               <p className="text-xs text-neutral-500 flex items-center justify-center gap-1 mt-1">
-                <MapPin className="w-3 h-3" /> Los Angeles, USA
+                <MapPin className="w-3 h-3 text-rose-500" /> {user?.country || user?.location || "Sri Lanka"}
               </p>
               <div className="mt-3 bg-purple-50 text-purple-700 text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1 border border-purple-100">
-                <Star className="w-3 h-3" /> Level 5 Contributor
+                <Star className="w-3 h-3" /> {user?.role === 'Super Admin' ? 'Super Admin' : (user ? 'Verified Member' : 'Guest Member')}
               </div>
             </div>
             <div className="grid grid-cols-3 divide-x divide-neutral-100 p-4 text-center">
               <div>
-                <div className="font-bold text-neutral-900">125</div>
+                <div className="font-bold text-neutral-900">{dbPosts.filter(p => p.authorId === user?.id || p.author === user?.name).length}</div>
                 <div className="text-xs text-neutral-500">Posts</div>
               </div>
               <div>
-                <div className="font-bold text-neutral-900">78</div>
-                <div className="text-xs text-neutral-500">Connections</div>
+                <div className="font-bold text-neutral-900">{Math.max(0, dbUsers.length - 1)}</div>
+                <div className="text-xs text-neutral-500">Network</div>
               </div>
               <div>
-                <div className="font-bold text-neutral-900">12</div>
+                <div className="font-bold text-neutral-900">{dbGroups.length}</div>
                 <div className="text-xs text-neutral-500">Groups</div>
               </div>
             </div>
             <div className="p-2 space-y-1 bg-neutral-50 border-t border-neutral-100">
-              {[
-                { icon: User, label: "My Profile & Dashboard", path: "/profile" },
-                { icon: Rss, label: "My Feed", active: view === "feed", id: "feed" },
-                { icon: MessageSquare, label: "Community Board", active: view === "board", id: "board", sectionKey: "communityBoard" as SectionKey },
-                { icon: Globe, label: "Community Map", id: "map", active: view === "map" },
-                { icon: Users, label: "My Connections", id: "people" },
-                { icon: Plane, label: "Travel Buddies", id: "travel", active: view === "travel", sectionKey: "travelBuddies" as SectionKey },
-                { icon: Heart, label: "Matrimonial (18+)", id: "matrimonial", active: view === "matrimonial", badge: "18+", sectionKey: "matrimonial" as SectionKey },
-                { icon: CreditCard, label: "Digital Cards", onClick: () => setIsDigitalCardsOpen(true), sectionKey: "digitalCards" as SectionKey },
-                { icon: Send, label: "Ceremony Invitations", onClick: () => setIsInvitationsOpen(true) },
-                { icon: Grid, label: "My Groups", id: "groups" },
-                { icon: Calendar, label: "My Events", path: "/events", sectionKey: "events" as SectionKey },
-                { icon: Bookmark, label: "My Bookmarks", id: "bookmarks", active: view === "bookmarks" },
-                { icon: MessageSquare, label: "Messages", badge: "3", id: "messages" },
-                { icon: Bell, label: "Notifications", badge: "8", id: "notifications" },
-                { icon: Settings, label: "Settings", path: "/profile" },
-              ].filter((item) => !item.sectionKey || isSectionEnabled(item.sectionKey)).map((item, i) => (
-                item.path ? (
-                  <Link key={i} to={item.path} className={`w-full flex items-center justify-between px-3 py-2 text-sm rounded-lg transition-colors ${item.active ? 'bg-amber-100 text-amber-900 font-bold' : 'text-neutral-600 hover:bg-neutral-200'}`}>
-                    <div className="flex items-center gap-3">
-                      <item.icon className="w-4 h-4" />
-                      {item.label}
-                    </div>
-                    {item.badge && (
-                      <span className="bg-amber-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
-                        {item.badge}
-                      </span>
-                    )}
-                  </Link>
-                ) : (
-                  <button 
-                    key={i} 
-                    onClick={() => {
-                      if (item.onClick) {
-                        item.onClick();
-                      } else if (item.id) {
-                        setView(item.id);
-                      }
-                    }} 
-                    className={`w-full flex items-center justify-between px-3 py-2 text-sm rounded-lg transition-colors ${view === item.id || item.active ? 'bg-amber-100 text-amber-900 font-bold' : 'text-neutral-600 hover:bg-neutral-200'}`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <item.icon className="w-4 h-4" />
-                      {item.label}
-                    </div>
-                    {item.badge && (
-                      <span className={`text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full ${item.id === 'matrimonial' ? 'bg-rose-600' : 'bg-amber-600'}`}>
-                        {item.badge}
-                      </span>
-                    )}
-                  </button>
-                )
-              ))}
+              {(() => {
+                const currentUserId = user?.uid || user?.id || 'guest';
+                const unreadNotifCount = dbNotifications.filter(n => !n.readBy || !n.readBy.includes(currentUserId)).length;
+
+                return [
+                  { icon: User, label: "My Profile & Dashboard", path: "/profile" },
+                  { icon: Rss, label: "My Feed", active: view === "feed", id: "feed" },
+                  { icon: MessageSquare, label: "Community Board", active: view === "board", id: "board", sectionKey: "communityBoard" as SectionKey },
+                  { icon: Globe, label: "Community Map", id: "map", active: view === "map" },
+                  { icon: Users, label: "My Connections", id: "people" },
+                  { icon: Plane, label: "Travel Buddies", id: "travel", active: view === "travel", sectionKey: "travelBuddies" as SectionKey },
+                  { icon: Heart, label: "Matrimonial (18+)", id: "matrimonial", active: view === "matrimonial", badge: "18+", sectionKey: "matrimonial" as SectionKey },
+                  { icon: CreditCard, label: "Digital Cards", onClick: () => setIsDigitalCardsOpen(true), sectionKey: "digitalCards" as SectionKey },
+                  { icon: Send, label: "Ceremony Invitations", onClick: () => setIsInvitationsOpen(true) },
+                  { icon: Grid, label: "My Groups", id: "groups" },
+                  { icon: Calendar, label: "My Events", path: "/events", sectionKey: "events" as SectionKey },
+                  { icon: Bookmark, label: "My Bookmarks", id: "bookmarks", active: view === "bookmarks" },
+                  { icon: MessageSquare, label: "Messages", id: "messages" },
+                  { icon: Bell, label: "Notifications", badge: unreadNotifCount > 0 ? String(unreadNotifCount) : undefined, id: "notifications" },
+                  { icon: Settings, label: "Settings", path: "/profile" },
+                ].filter((item) => !item.sectionKey || isSectionEnabled(item.sectionKey)).map((item, i) => (
+                  item.path ? (
+                    <Link key={i} to={item.path} className={`w-full flex items-center justify-between px-3 py-2 text-sm rounded-lg transition-colors ${item.active ? 'bg-amber-100 text-amber-900 font-bold' : 'text-neutral-600 hover:bg-neutral-200'}`}>
+                      <div className="flex items-center gap-3">
+                        <item.icon className="w-4 h-4" />
+                        {item.label}
+                      </div>
+                      {item.badge && (
+                        <span className="bg-amber-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                          {item.badge}
+                        </span>
+                      )}
+                    </Link>
+                  ) : (
+                    <button 
+                      key={i} 
+                      onClick={() => {
+                        if (item.onClick) {
+                          item.onClick();
+                        } else if (item.id) {
+                          setView(item.id);
+                        }
+                      }} 
+                      className={`w-full flex items-center justify-between px-3 py-2 text-sm rounded-lg transition-colors ${view === item.id || item.active ? 'bg-amber-100 text-amber-900 font-bold' : 'text-neutral-600 hover:bg-neutral-200'}`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <item.icon className="w-4 h-4" />
+                        {item.label}
+                      </div>
+                      {item.badge && (
+                        <span className={`text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full ${item.id === 'matrimonial' ? 'bg-rose-600' : 'bg-amber-600'}`}>
+                          {item.badge}
+                        </span>
+                      )}
+                    </button>
+                  )
+                ));
+              })()}
             </div>
           </div>
 
@@ -332,17 +355,15 @@ export function Directory() {
             <h3 className="font-bold text-neutral-900 mb-4">Explore by Region</h3>
             <div className="space-y-3">
               {[
-                { label: "North America", count: "2.1K" },
-                { label: "Europe", count: "1.8K" },
-                { label: "Australia & NZ", count: "980" },
-                { label: "Asia", count: "1.6K" },
-                { label: "Middle East", count: "620" },
-                { label: "Africa", count: "430" },
-                { label: "South America", count: "310" },
+                { label: "Asia & Sri Lanka", count: dbTemples.length + dbUsers.filter(u => !u.country || u.country.toLowerCase().includes("sri lanka") || u.country.toLowerCase().includes("asia")).length },
+                { label: "North America", count: dbUsers.filter(u => u.country?.toLowerCase().includes("usa") || u.country?.toLowerCase().includes("canada") || u.location?.toLowerCase().includes("usa")).length },
+                { label: "Europe & UK", count: dbUsers.filter(u => u.country?.toLowerCase().includes("uk") || u.country?.toLowerCase().includes("europe") || u.country?.toLowerCase().includes("london")).length },
+                { label: "Australia & NZ", count: dbUsers.filter(u => u.country?.toLowerCase().includes("australia") || u.country?.toLowerCase().includes("zealand")).length },
+                { label: "Middle East", count: dbUsers.filter(u => u.country?.toLowerCase().includes("uae") || u.country?.toLowerCase().includes("qatar") || u.country?.toLowerCase().includes("dubai")).length }
               ].map((item, i) => (
-                <div key={i} className="flex items-center justify-between text-sm cursor-pointer group">
+                <div key={i} onClick={() => setView('people')} className="flex items-center justify-between text-sm cursor-pointer group">
                   <span className="text-neutral-600 group-hover:text-orange-600 transition-colors">{item.label}</span>
-                  <span className="text-xs text-neutral-400 group-hover:text-orange-600">{item.count}</span>
+                  <span className="text-xs font-semibold text-neutral-400 group-hover:text-orange-600">{item.count}</span>
                 </div>
               ))}
             </div>
@@ -352,28 +373,41 @@ export function Directory() {
           <div className="bg-white rounded-xl border border-neutral-200 p-5">
             <h3 className="font-bold text-neutral-900 mb-4">Suggested Connections</h3>
             <div className="space-y-4">
-              {[
-                { name: "Nadeesha Perera", loc: "Melbourne, Australia", img: "https://i.pravatar.cc/150?u=nadeesha" },
-                { name: "Chamika Jayawardena", loc: "Toronto, Canada", img: "https://i.pravatar.cc/150?u=chamika" },
-                { name: "Tharindu Senarathne", loc: "London, UK", img: "https://i.pravatar.cc/150?u=tharindu" },
-                { name: "Sewmini Dissanayake", loc: "New York, USA", img: "https://i.pravatar.cc/150?u=sewmini" },
-                { name: "Dilshan Wijesinghe", loc: "Sydney, Australia", img: "https://i.pravatar.cc/150?u=dilshan" },
-              ].map((person, i) => (
-                <div key={i} className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <img referrerPolicy="no-referrer" src={person.img} alt={person.name} className="w-10 h-10 rounded-full" />
-                    <div>
-                      <h4 className="font-semibold text-xs text-neutral-900">{person.name}</h4>
-                      <p className="text-[10px] text-neutral-500">{person.loc}</p>
-                    </div>
-                  </div>
-                  <button className="text-[10px] font-medium text-orange-600 border border-orange-200 px-2 py-1 rounded-full hover:bg-orange-50 transition-colors">
-                    Connect
+              {dbUsers.filter(u => u.id !== user?.id && u.uid !== user?.id && u.email !== user?.email).length === 0 ? (
+                <div className="text-center py-4 px-2 bg-neutral-50 rounded-xl border border-neutral-100">
+                  <Users className="w-8 h-8 text-neutral-300 mx-auto mb-2" />
+                  <p className="text-xs text-neutral-700 font-bold">Invite Friends & Devotees</p>
+                  <p className="text-[11px] text-neutral-500 mt-1">Connect with fellow community members and expand your network.</p>
+                  <button onClick={() => setView('people')} className="mt-3 px-3 py-1.5 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-xs font-bold transition-all shadow-xs cursor-pointer">
+                    Browse Directory
                   </button>
                 </div>
-              ))}
+              ) : (
+                dbUsers
+                  .filter(u => u.id !== user?.id && u.uid !== user?.id && u.email !== user?.email)
+                  .slice(0, 5)
+                  .map((person, i) => (
+                    <div key={person.id || person.uid || i} className="flex items-center justify-between">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <img 
+                          referrerPolicy="no-referrer" 
+                          src={person.avatar || person.photoURL || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200"} 
+                          alt={person.name} 
+                          className="w-10 h-10 rounded-full object-cover shrink-0" 
+                        />
+                        <div className="min-w-0">
+                          <h4 className="font-semibold text-xs text-neutral-900 truncate">{person.name || person.displayName || "Member"}</h4>
+                          <p className="text-[10px] text-neutral-500 truncate">{person.location || person.country || "Community Member"}</p>
+                        </div>
+                      </div>
+                      <button onClick={() => setView('people')} className="text-[10px] font-medium text-orange-600 border border-orange-200 px-2 py-1 rounded-full hover:bg-orange-50 transition-colors shrink-0 cursor-pointer">
+                        Connect
+                      </button>
+                    </div>
+                  ))
+              )}
             </div>
-            <button onClick={() => setView('people')} className="w-full mt-4 text-xs font-medium text-blue-600 hover:text-blue-700">View All</button>
+            <button onClick={() => setView('people')} className="w-full mt-4 text-xs font-medium text-blue-600 hover:text-blue-700 cursor-pointer">View All Members</button>
           </div>
         </div>
 
@@ -630,32 +664,43 @@ export function Directory() {
       <div className="bg-white rounded-xl border border-neutral-200 p-6">
         <div className="flex items-center justify-between mb-6">
           <h3 className="font-bold text-neutral-900">Popular Discussions in Community Board</h3>
-          <button onClick={() => setView('board')} className="text-sm font-medium text-blue-600 hover:text-blue-700">View All</button>
+          <button onClick={() => setView('board')} className="text-sm font-medium text-blue-600 hover:text-blue-700 cursor-pointer">View All</button>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          {[
-            { id: "top-1", title: "What is the best Buddhist book for beginners?", author: "Vimukthi Perera", time: "2 hours ago", replies: 24, img: "https://i.pravatar.cc/150?u=vimukthi" },
-            { id: "top-2", title: "How to stay mindful in a busy corporate environment?", author: "Kavindu Silva", time: "4 hours ago", replies: 18, img: "https://i.pravatar.cc/150?u=kavindu" },
-            { id: "top-3", title: "Best cultural and temple circuits to visit in Sri Lanka", author: "Rashmi De Silva", time: "6 hours ago", replies: 32, img: "https://i.pravatar.cc/150?u=rashmi" },
-            { id: "top-4", title: "Looking for travel buddies to Japan in November", author: "Sahan Jayasekara", time: "8 hours ago", replies: 15, img: "https://i.pravatar.cc/150?u=sahan" },
-          ].map((topic, i) => (
-            <div key={i} onClick={() => setView('board', { topicId: topic.id })} className="flex flex-col p-4 bg-neutral-50 rounded-xl border border-neutral-100 hover:border-orange-200 transition-colors cursor-pointer group">
-              <h4 className="text-sm font-bold text-neutral-900 mb-3 line-clamp-2 group-hover:text-orange-700">{topic.title}</h4>
-              <div className="flex items-center justify-between mt-auto">
-                <div className="flex items-center gap-2">
-                  <img referrerPolicy="no-referrer" src={topic.img} alt={topic.author} className="w-6 h-6 rounded-full" />
-                  <div>
-                    <div className="text-xs font-bold text-neutral-900">{topic.author}</div>
-                    <div className="text-[10px] text-neutral-500">{topic.time}</div>
+        {dbDiscussions.length === 0 ? (
+          <div className="text-center py-8 px-4 bg-neutral-50 rounded-xl border border-dashed border-neutral-200">
+            <MessageSquare className="w-8 h-8 text-neutral-400 mx-auto mb-2" />
+            <h4 className="font-bold text-sm text-neutral-800">No discussions on the Community Board yet</h4>
+            <p className="text-xs text-neutral-500 max-w-md mx-auto mt-1 mb-4">
+              Have a Dhamma question, reflection, or community announcement? Be the first to start a conversation.
+            </p>
+            <button 
+              onClick={() => setView('board')} 
+              className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
+            >
+              Start a Discussion
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {dbDiscussions.slice(0, 4).map((topic, i) => (
+              <div key={topic.id || i} onClick={() => setView('board', { topicId: topic.id })} className="flex flex-col p-4 bg-neutral-50 rounded-xl border border-neutral-100 hover:border-orange-200 transition-colors cursor-pointer group">
+                <h4 className="text-sm font-bold text-neutral-900 mb-3 line-clamp-2 group-hover:text-orange-700">{topic.title}</h4>
+                <div className="flex items-center justify-between mt-auto">
+                  <div className="flex items-center gap-2">
+                    <img referrerPolicy="no-referrer" src={topic.img || topic.authorImg || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200"} alt={topic.author} className="w-6 h-6 rounded-full object-cover" />
+                    <div>
+                      <div className="text-xs font-bold text-neutral-900 truncate max-w-[100px]">{topic.author}</div>
+                      <div className="text-[10px] text-neutral-500">{topic.time || "Recently"}</div>
+                    </div>
+                  </div>
+                  <div className="text-xs text-neutral-500 flex items-center gap-1">
+                    <MessageSquare className="w-3 h-3" /> {topic.replies || (topic.comments?.length || 0)}
                   </div>
                 </div>
-                <div className="text-xs text-neutral-500 flex items-center gap-1">
-                  <MessageSquare className="w-3 h-3" /> {topic.replies}
-                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Community Guidelines Notice */}

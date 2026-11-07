@@ -32,55 +32,7 @@ export interface DigitalCard {
 
 const DIGITAL_CARDS_KEY = "lanka_digital_business_cards_v1";
 
-const DEFAULT_CARDS: DigitalCard[] = [
-  {
-    id: "card-saminda-prof",
-    userId: "damika1316@gmail.com",
-    type: "professional",
-    name: "Saminda Fernando",
-    title: "Senior Solutions Architect & Tech Consultant",
-    company: "Lanka Global Innovations Inc.",
-    bio: "Helping diaspora enterprises scale with modern cloud platforms and digital transformation. Practicing Theravada Buddhist.",
-    phone: "+1 (310) 555-0198",
-    email: "saminda.fernando@lankaglobal.com",
-    whatsapp: "+13105550198",
-    website: "https://lankaglobal.com",
-    location: "Los Angeles, CA, USA",
-    avatar: "https://images.unsplash.com/photo-1599566150163-29194dcaad36?auto=format&fit=crop&q=80&w=300",
-    themeColor: "orange",
-    socialLinks: {
-      linkedin: "https://linkedin.com/in/saminda-fernando",
-      twitter: "https://twitter.com/saminda_f",
-      github: "https://github.com/saminda-f"
-    },
-    isActive: true,
-    createdAt: "Jan 15, 2025",
-    updatedAt: "May 20, 2025"
-  },
-  {
-    id: "card-saminda-pers",
-    userId: "damika1316@gmail.com",
-    type: "personal",
-    name: "Saminda Fernando",
-    title: "Dhamma Volunteer & Community Seva Coordinator",
-    company: "LA Sri Lanka Buddhist Vihara",
-    bio: "Coordinating youth Sunday school programs, Vesak lantern workshops, and Sangha almsgiving.",
-    phone: "+1 (310) 555-0198",
-    email: "damika1316@gmail.com",
-    whatsapp: "+13105550198",
-    website: "https://lankabuddhist.com",
-    location: "Los Angeles, California",
-    avatar: "https://images.unsplash.com/photo-1599566150163-29194dcaad36?auto=format&fit=crop&q=80&w=300",
-    themeColor: "amber",
-    socialLinks: {
-      facebook: "https://facebook.com/saminda.community",
-      instagram: "https://instagram.com/saminda.dhamma"
-    },
-    isActive: true,
-    createdAt: "Feb 10, 2025",
-    updatedAt: "May 18, 2025"
-  }
-];
+const DEFAULT_CARDS: DigitalCard[] = [];
 
 export function getAllDigitalCards(): DigitalCard[] {
   try {

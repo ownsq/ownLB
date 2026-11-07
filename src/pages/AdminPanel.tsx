@@ -1376,7 +1376,7 @@ export function AdminPanel() {
                             <td className="py-3 px-4">
                               <div className="flex items-center gap-3">
                                 <img 
-                                  src={u.avatar || `https://i.pravatar.cc/150?u=${encodeURIComponent(u.email)}`}
+                                  src={u.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200"}
                                   alt={u.name}
                                   className="w-9 h-9 rounded-full object-cover border border-neutral-200 shrink-0"
                                 />
@@ -2024,7 +2024,7 @@ export function AdminPanel() {
 
             <div className="p-3 bg-neutral-50 rounded-xl border border-neutral-200 flex items-center gap-3">
               <img 
-                src={userToBan.avatar || `https://i.pravatar.cc/150?u=${encodeURIComponent(userToBan.email)}`}
+                src={userToBan.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200"}
                 alt={userToBan.name}
                 className="w-10 h-10 rounded-full object-cover border border-neutral-200"
               />
@@ -2146,7 +2146,7 @@ export function AdminPanel() {
             <div className="flex items-center justify-between pb-3 border-b border-neutral-100">
               <div className="flex items-center gap-2.5">
                 <img 
-                  src={selectedUserDetails.avatar || `https://i.pravatar.cc/150?u=${encodeURIComponent(selectedUserDetails.email)}`}
+                  src={selectedUserDetails.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200"}
                   alt={selectedUserDetails.name}
                   className="w-10 h-10 rounded-full object-cover border border-neutral-200"
                 />

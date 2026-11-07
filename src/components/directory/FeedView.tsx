@@ -1,4 +1,4 @@
-import { Search, Filter, Share2, MapPin, Image as ImageIcon, Video, BarChart2, Calendar, Smile, ThumbsUp, MessageSquare, X } from 'lucide-react';
+import { Search, Filter, Share2, MapPin, Image as ImageIcon, Video, BarChart2, Calendar, Smile, ThumbsUp, MessageSquare, X, Sparkles } from 'lucide-react';
 import { useAuth } from "../../contexts/AuthContext";
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from "motion/react";
@@ -183,13 +183,16 @@ export function FeedView() {
           </button>
         </div>
 
-        {/* Decorative Avatars */}
-        <div className="hidden md:block absolute right-8 top-0 bottom-0 w-1/2">
-            {/* Just placeholders for the avatar pins on map */}
-            <motion.img initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: Math.random() * 0.5 + 0.2, type: "spring" }} referrerPolicy="no-referrer" src="https://i.pravatar.cc/150?u=map1" className="absolute top-[20%] left-[20%] w-10 h-10 rounded-full border-2 border-white shadow-lg" alt="Avatar" />
-            <motion.img initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: Math.random() * 0.5 + 0.2, type: "spring" }} referrerPolicy="no-referrer" src="https://i.pravatar.cc/150?u=map2" className="absolute top-[40%] left-[50%] w-12 h-12 rounded-full border-2 border-white shadow-lg" alt="Avatar" />
-            <motion.img initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: Math.random() * 0.5 + 0.2, type: "spring" }} referrerPolicy="no-referrer" src="https://i.pravatar.cc/150?u=map3" className="absolute bottom-[20%] left-[30%] w-14 h-14 rounded-full border-2 border-white shadow-lg" alt="Avatar" />
-            <motion.img initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: Math.random() * 0.5 + 0.2, type: "spring" }} referrerPolicy="no-referrer" src="https://i.pravatar.cc/150?u=map4" className="absolute top-[30%] right-[10%] w-10 h-10 rounded-full border-2 border-white shadow-lg" alt="Avatar" />
+        {/* Decorative Community Highlights */}
+        <div className="hidden md:flex absolute right-8 top-0 bottom-0 w-1/2 items-center justify-end pr-4">
+          <div className="p-4 bg-white/10 backdrop-blur-md rounded-2xl border border-white/20 text-white max-w-xs space-y-1.5 shadow-xl">
+            <div className="flex items-center gap-2 text-amber-400 font-bold text-xs">
+              <Sparkles className="w-4 h-4" /> Global Community Feed
+            </div>
+            <p className="text-[11px] text-slate-200 leading-relaxed">
+              Connect with Buddhist devotees, community organizations, and diaspora members in real-time.
+            </p>
+          </div>
         </div>
       </div>
 
@@ -247,13 +250,13 @@ export function FeedView() {
         {/* Create Post */}
         <div className="p-4 border-b border-neutral-100">
           <div className="flex gap-3">
-            <img referrerPolicy="no-referrer" src={user?.avatar || "https://i.pravatar.cc/150?u=saminda"} alt={user?.name} className="w-10 h-10 rounded-full" />
+            <img referrerPolicy="no-referrer" src={user?.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200"} alt={user?.name} className="w-10 h-10 rounded-full object-cover" />
             <input 
               type="text"
               value={postContent}
               onChange={(e) => setPostContent(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handlePost()}
-              placeholder={`What's on your mind, ${user?.name?.split(' ')[0] || "Saminda"}?`}
+              placeholder={`What's on your mind, ${user?.name?.split(' ')[0] || "friend"}?`}
               className="flex-1 bg-neutral-50 border border-neutral-200 rounded-full px-4 py-2 text-sm text-neutral-900 outline-none focus:bg-white focus:border-purple-300 transition-colors"
             />
           </div>
@@ -492,11 +495,10 @@ export function FeedView() {
                     <div className="w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center border border-white text-[8px] text-white">👍</div>
                     <div className="w-4 h-4 bg-red-500 rounded-full flex items-center justify-center border border-white text-[8px] text-white">❤️</div>
                   </div>
-                  <span className="ml-1">You, Chamika and 128 others</span>
+                  <span className="ml-1">{post.likesCount || 0} {post.likesCount === 1 ? 'like' : 'likes'}</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span>24 Comments</span>
-                  <span>15 Shares</span>
+                  <span>{post.commentsCount || 0} {post.commentsCount === 1 ? 'comment' : 'comments'}</span>
                 </div>
               </div>
               

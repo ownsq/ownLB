@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { 
   Search, Bell, MessageSquare, Home, Users, ShoppingBag, 
   Calendar, Building2, Utensils, User, Star, BookOpen, Video, ChevronDown, MapPin, Heart, UserPlus, Settings, LogOut, Check, X, ShieldAlert, Sparkles, HelpCircle,
-  Clock, Volume2, VolumeX, Play, AlertCircle
+  Clock, Volume2, VolumeX, Play, AlertCircle, Plane
 } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { cn } from "../../lib/utils";
@@ -25,6 +25,13 @@ import {
 } from "../../utils/eventNotificationSystem";
 import { getAllCommunityEvents, getFavoriteEventIds } from "../../utils/userEventsStorage";
 import { EventItem } from "../../data/eventsData";
+import { 
+  subscribeNotifications, 
+  subscribeEvents, 
+  markNotificationAsReadInDb, 
+  markAllNotificationsAsReadInDb, 
+  AppNotification 
+} from "../../lib/firestoreService";
 import { useAd } from "../../contexts/AdContext";
 import { GoogleAdSense } from "../ads/GoogleAdSense";
 import { useSectionConfig, SectionKey } from "../../contexts/SectionContext";
@@ -80,6 +87,7 @@ export function MainLayout() {
   const [favoritedEvents, setFavoritedEvents] = useState<EventItem[]>([]);
   const [triggeredAlerts, setTriggeredAlerts] = useState<TriggeredAlert[]>([]);
   const [unreadAlertsCount, setUnreadAlertsCount] = useState<number>(0);
+  const [dbNotifications, setDbNotifications] = useState<AppNotification[]>([]);
   const [notifSettings, setNotifSettings] = useState<NotificationSettings>(getNotificationSettings);
   const [pushStatus, setPushStatus] = useState<NotificationPermission | 'unsupported'>('default');
 
@@ -94,6 +102,10 @@ export function MainLayout() {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(""), 3500);
   };
+
+  const currentUserId = user?.uid || 'guest';
+  const unreadCommunityCount = dbNotifications.filter(n => !n.readBy || !n.readBy.includes(currentUserId)).length;
+  const totalUnreadCount = unreadAlertsCount + unreadCommunityCount;
 
   const refreshNotificationData = () => {
     try {
@@ -114,6 +126,17 @@ export function MainLayout() {
     // Run an initial check for 1-hour events
     checkUpcomingFavoriteEvents();
 
+    // Subscribe to real-time notifications in Firebase Firestore
+    const unsubNotifs = subscribeNotifications((list) => {
+      setDbNotifications(list);
+    }, user?.uid);
+
+    // Subscribe to live events in Firebase Firestore
+    const unsubEvents = subscribeEvents((list) => {
+      const favIds = getFavoriteEventIds();
+      setFavoritedEvents(list.filter(e => favIds.includes(e.id)));
+    });
+
     // Background interval checking every 30 seconds
     const interval = setInterval(() => {
       checkUpcomingFavoriteEvents();
@@ -132,12 +155,51 @@ export function MainLayout() {
 
     return () => {
       clearInterval(interval);
+      unsubNotifs();
+      unsubEvents();
       window.removeEventListener('lanka_favorites_updated', handleFavUpdated);
       window.removeEventListener('lanka_triggered_alerts_updated', handleAlertsUpdated);
       window.removeEventListener('lanka_notification_settings_updated', handleSettingsUpdated);
       window.removeEventListener('lanka_alerts_read', handleAlertRead);
     };
-  }, []);
+  }, [user]);
+
+  const getNotifIcon = (section?: string) => {
+    switch (section) {
+      case 'events':
+        return { icon: Calendar, color: 'text-amber-600', bg: 'bg-amber-100', label: 'Events' };
+      case 'temples':
+        return { icon: Building2, color: 'text-orange-600', bg: 'bg-orange-100', label: 'Temples' };
+      case 'videos':
+        return { icon: Video, color: 'text-red-600', bg: 'bg-red-100', label: 'Videos' };
+      case 'travel':
+        return { icon: Plane, color: 'text-sky-600', bg: 'bg-sky-100', label: 'Travel' };
+      case 'classifieds':
+        return { icon: ShoppingBag, color: 'text-emerald-600', bg: 'bg-emerald-100', label: 'Marketplace' };
+      case 'learn':
+        return { icon: BookOpen, color: 'text-indigo-600', bg: 'bg-indigo-100', label: 'Learn' };
+      default:
+        return { icon: Bell, color: 'text-neutral-600', bg: 'bg-neutral-100', label: 'Community' };
+    }
+  };
+
+  const formatNotifTime = (isoString?: string) => {
+    if (!isoString) return "Recently";
+    try {
+      const d = new Date(isoString);
+      const diffMs = Date.now() - d.getTime();
+      const mins = Math.floor(diffMs / 60000);
+      if (mins < 1) return "Just now";
+      if (mins < 60) return `${mins}m ago`;
+      const hours = Math.floor(mins / 60);
+      if (hours < 24) return `${hours}h ago`;
+      const days = Math.floor(hours / 24);
+      if (days < 7) return `${days}d ago`;
+      return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    } catch {
+      return "Recently";
+    }
+  };
 
   const handleSimulateAlert = (event: EventItem) => {
     triggerOneHourAlert(event, true);
@@ -405,9 +467,11 @@ export function MainLayout() {
                 title="Notifications & Gathering Reminders"
               >
                 <Bell className="w-5 h-5" />
-                <span className="absolute top-0 right-0 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full border-2 border-white flex items-center justify-center min-w-[18px]">
-                  {3 + unreadAlertsCount}
-                </span>
+                {totalUnreadCount > 0 && (
+                  <span className="absolute top-0 right-0 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full border-2 border-white flex items-center justify-center min-w-[18px]">
+                    {totalUnreadCount}
+                  </span>
+                )}
               </button>
               
               {showNotifications && (
@@ -420,7 +484,7 @@ export function MainLayout() {
                       </div>
                       <div>
                         <h3 className="font-bold text-sm text-neutral-900 leading-none">Notifications & Alerts</h3>
-                        <p className="text-[10px] text-neutral-500 mt-0.5">1-Hour Gathering Reminders</p>
+                        <p className="text-[10px] text-neutral-500 mt-0.5">1-Hour Reminders & Cross-Section Alerts</p>
                       </div>
                     </div>
 
@@ -468,9 +532,9 @@ export function MainLayout() {
                       )}
                     >
                       <Users className="w-3.5 h-3.5 text-neutral-400" />
-                      <span>Community</span>
+                      <span>All Sections</span>
                       <span className="text-[10px] bg-neutral-100 text-neutral-600 px-1.5 py-0.2 rounded-full font-bold ml-1">
-                        3
+                        {unreadCommunityCount > 0 ? unreadCommunityCount : dbNotifications.length}
                       </span>
                     </button>
                   </div>
@@ -617,38 +681,102 @@ export function MainLayout() {
                         )}
                       </div>
                     ) : (
-                      <div>
-                        {[
-                          { icon: Heart, color: "text-red-500", bg: "bg-red-50", text: "Chamika Jayawardena liked your post.", time: "10 mins ago" },
-                          { icon: MessageSquare, color: "text-blue-500", bg: "bg-blue-50", text: "Rashmi De Silva commented on your travel plan.", time: "1 hour ago" },
-                          { icon: UserPlus, color: "text-emerald-500", bg: "bg-emerald-50", text: "Vimukthi Perera sent you a connection request.", time: "2 hours ago" },
-                        ].map((notif, i) => (
-                          <div 
-                            key={i} 
-                            onClick={() => {
-                              setShowNotifications(false);
-                              navigate("/directory?view=notifications");
-                            }}
-                            className="p-3 border-b border-neutral-50 flex gap-3 hover:bg-neutral-50 transition-colors cursor-pointer"
-                          >
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${notif.bg} ${notif.color}`}>
-                              <notif.icon className="w-4 h-4" />
+                      <div className="p-2 space-y-2">
+                        {dbNotifications.length > 0 && (
+                          <div className="flex items-center justify-between px-2 py-1 text-xs">
+                            <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-wider">
+                              Cross-Section Alerts
+                            </span>
+                            {unreadCommunityCount > 0 && (
+                              <button
+                                onClick={async () => {
+                                  await markAllNotificationsAsReadInDb(dbNotifications, currentUserId);
+                                }}
+                                className="text-[11px] font-bold text-amber-700 hover:text-amber-800 transition-colors"
+                              >
+                                Mark all as read
+                              </button>
+                            )}
+                          </div>
+                        )}
+
+                        {dbNotifications.length === 0 ? (
+                          <div className="text-center py-8 px-4 space-y-2">
+                            <div className="w-9 h-9 rounded-full bg-neutral-100 text-neutral-400 mx-auto flex items-center justify-center">
+                              <Bell className="w-4 h-4" />
                             </div>
-                            <div>
-                              <p className="text-sm text-neutral-900 font-medium leading-snug">{notif.text}</p>
-                              <p className="text-xs text-neutral-500 mt-0.5">{notif.time}</p>
+                            <p className="text-xs font-bold text-neutral-700">All caught up!</p>
+                            <p className="text-[11px] text-neutral-500 max-w-xs mx-auto">
+                              No active notifications. Live updates from events, temples, videos, and community discussions will appear here in real-time.
+                            </p>
+                            <Link
+                              to="/directory?view=notifications"
+                              onClick={() => setShowNotifications(false)}
+                              className="inline-block mt-2 text-xs font-bold text-amber-600 hover:underline"
+                            >
+                              Open Notification Center →
+                            </Link>
+                          </div>
+                        ) : (
+                          <div className="space-y-1.5">
+                            {dbNotifications.slice(0, 5).map((notif) => {
+                              const isItemRead = notif.readBy && notif.readBy.includes(currentUserId);
+                              const secIcon = getNotifIcon(notif.section);
+                              const IconComponent = secIcon.icon;
+
+                              return (
+                                <div
+                                  key={notif.id}
+                                  onClick={async () => {
+                                    if (!isItemRead) {
+                                      await markNotificationAsReadInDb(notif.id, currentUserId, notif.readBy).catch(() => {});
+                                    }
+                                    setShowNotifications(false);
+                                    navigate(notif.link || "/directory?view=notifications");
+                                  }}
+                                  className={`p-2.5 rounded-xl border flex items-start gap-2.5 transition-all cursor-pointer ${
+                                    isItemRead
+                                      ? "bg-white border-neutral-100 hover:bg-neutral-50/70"
+                                      : "bg-amber-50/40 border-amber-200/60 hover:bg-amber-50/80"
+                                  }`}
+                                >
+                                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${secIcon.bg} ${secIcon.color}`}>
+                                    <IconComponent className="w-4 h-4" />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center justify-between gap-1">
+                                      <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded uppercase ${secIcon.bg} ${secIcon.color}`}>
+                                        {secIcon.label}
+                                      </span>
+                                      <span className="text-[10px] text-neutral-400">
+                                        {formatNotifTime(notif.createdAt)}
+                                      </span>
+                                    </div>
+                                    <p className={`text-xs mt-1 leading-snug truncate ${isItemRead ? 'text-neutral-700 font-medium' : 'text-neutral-900 font-bold'}`}>
+                                      {notif.title}
+                                    </p>
+                                    <p className="text-[11px] text-neutral-500 line-clamp-1 mt-0.5">
+                                      {notif.message}
+                                    </p>
+                                  </div>
+                                  {!isItemRead && (
+                                    <span className="w-2 h-2 rounded-full bg-amber-600 shrink-0 self-center" />
+                                  )}
+                                </div>
+                              );
+                            })}
+
+                            <div className="pt-2 border-t border-neutral-100 text-center">
+                              <Link 
+                                to="/directory?view=notifications" 
+                                onClick={() => setShowNotifications(false)}
+                                className="text-xs font-semibold text-amber-700 hover:text-amber-800 block py-1"
+                              >
+                                See all section notifications & alerts ({dbNotifications.length}) →
+                              </Link>
                             </div>
                           </div>
-                        ))}
-                        <div className="p-3 border-t border-neutral-100 text-center bg-neutral-50">
-                          <Link 
-                            to="/directory?view=notifications" 
-                            onClick={() => setShowNotifications(false)}
-                            className="text-xs font-semibold text-amber-700 hover:text-amber-800 block"
-                          >
-                            See all community activity →
-                          </Link>
-                        </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -688,12 +816,12 @@ export function MainLayout() {
                         </span>
                         {user.provider === 'google' && (
                           <span className="text-[9px] bg-blue-50 text-blue-700 px-1.5 py-0.2 rounded font-bold border border-blue-200">
-                            Google
+                            Google Account
                           </span>
                         )}
-                        {user.provider === 'password' && (
+                        {user.provider === 'quick' && (
                           <span className="text-[9px] bg-amber-50 text-amber-800 px-1.5 py-0.2 rounded font-bold border border-amber-200">
-                            Firebase
+                            Super Admin
                           </span>
                         )}
                       </div>

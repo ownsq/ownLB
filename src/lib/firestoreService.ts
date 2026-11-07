@@ -613,3 +613,160 @@ export async function addDiscussionCommentToDb(topicId: string, currentComments:
     throw error;
   }
 }
+
+// ==========================================
+// 9. COMMUNITY TRAVEL BUDDY PLANS
+// ==========================================
+export function subscribeTravelPlans(callback: (plans: any[]) => void): Unsubscribe {
+  const colRef = collection(db, "travel_plans");
+  return onSnapshot(
+    colRef,
+    (snapshot) => {
+      const list: any[] = [];
+      snapshot.forEach((docSnap) => {
+        list.push({ id: docSnap.id, ...(docSnap.data() as any) });
+      });
+      list.sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
+      callback(list);
+    },
+    (error) => {
+      handleFirestoreError(error, OperationType.LIST, "travel_plans");
+    }
+  );
+}
+
+export async function addTravelPlanToDb(plan: any): Promise<string> {
+  const path = "travel_plans";
+  try {
+    const id = `tp-${Date.now()}`;
+    const cleanPlan = {
+      ...plan,
+      id,
+      authorId: auth.currentUser?.uid || "damika-user",
+      joinRequests: plan.joinRequests || [],
+      approvedCompanions: plan.approvedCompanions || [],
+      coordinationNotes: plan.coordinationNotes || [],
+      createdAt: new Date().toISOString()
+    };
+    await setDoc(doc(db, path, id), cleanPlan);
+    return id;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.CREATE, path);
+    throw error;
+  }
+}
+
+export async function updateTravelPlanInDb(id: string, updates: any): Promise<void> {
+  const path = `travel_plans/${id}`;
+  try {
+    await updateDoc(doc(db, "travel_plans", id), {
+      ...updates,
+      updatedAt: new Date().toISOString()
+    });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, path);
+    throw error;
+  }
+}
+
+export async function deleteTravelPlanFromDb(id: string): Promise<void> {
+  const path = `travel_plans/${id}`;
+  try {
+    await deleteDoc(doc(db, "travel_plans", id));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, path);
+    throw error;
+  }
+}
+
+// ==========================================
+// 10. NOTIFICATIONS & ALERTS (ALL SECTIONS)
+// ==========================================
+export interface AppNotification {
+  id: string;
+  userId?: string; // 'all' or specific user UID
+  title: string;
+  message: string;
+  section?: 'events' | 'community' | 'temples' | 'monks' | 'famous' | 'videos' | 'learn' | 'classifieds' | 'travel' | 'restaurants';
+  type?: 'info' | 'event' | 'post' | 'travel' | 'announcement' | 'alert';
+  link?: string;
+  readBy?: string[];
+  authorName?: string;
+  authorAvatar?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export function subscribeNotifications(callback: (notifications: AppNotification[]) => void, currentUserId?: string): Unsubscribe {
+  const colRef = collection(db, "notifications");
+  return onSnapshot(
+    colRef,
+    (snapshot) => {
+      const list: AppNotification[] = [];
+      snapshot.forEach((docSnap) => {
+        const item = { id: docSnap.id, ...(docSnap.data() as any) } as AppNotification;
+        if (!item.userId || item.userId === 'all' || (currentUserId && item.userId === currentUserId)) {
+          list.push(item);
+        }
+      });
+      list.sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
+      callback(list);
+    },
+    (error) => {
+      handleFirestoreError(error, OperationType.LIST, "notifications");
+    }
+  );
+}
+
+export async function addNotificationToDb(notification: Omit<AppNotification, "id">): Promise<string> {
+  const path = "notifications";
+  try {
+    const id = `notif-${Date.now()}`;
+    const cleanNotif: AppNotification = {
+      ...notification,
+      id,
+      readBy: notification.readBy || [],
+      createdAt: notification.createdAt || new Date().toISOString()
+    };
+    await setDoc(doc(db, path, id), cleanNotif);
+    return id;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.CREATE, path);
+    throw error;
+  }
+}
+
+export async function markNotificationAsReadInDb(notificationId: string, userId: string, currentReadBy: string[] = []): Promise<void> {
+  const path = `notifications/${notificationId}`;
+  try {
+    const set = new Set(currentReadBy);
+    set.add(userId);
+    await updateDoc(doc(db, "notifications", notificationId), {
+      readBy: Array.from(set),
+      updatedAt: new Date().toISOString()
+    });
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, path);
+    throw error;
+  }
+}
+
+export async function markAllNotificationsAsReadInDb(notifications: AppNotification[], userId: string): Promise<void> {
+  for (const notif of notifications) {
+    const readBy = notif.readBy || [];
+    if (!readBy.includes(userId)) {
+      await markNotificationAsReadInDb(notif.id, userId, readBy).catch(() => {});
+    }
+  }
+}
+
+export async function deleteNotificationFromDb(id: string): Promise<void> {
+  const path = `notifications/${id}`;
+  try {
+    await deleteDoc(doc(db, "notifications", id));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, path);
+    throw error;
+  }
+}
+

@@ -195,54 +195,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const loginWithEmail = async (email: string, password: string) => {
-    try {
-      setAuthError(null);
-      setIsFirebaseLoading(true);
-      await signInWithEmailAndPassword(auth, email.trim(), password);
-    } catch (err: unknown) {
-      console.error("Firebase email login error: ", err);
-      const friendly = mapAuthError(err);
-      setAuthError(friendly);
-      throw new Error(friendly);
-    } finally {
-      setIsFirebaseLoading(false);
-    }
+  const loginWithEmail = async (_email: string, _password: string) => {
+    const errorMsg = "Company and password logins are disabled. Only personal Google accounts can log in. Please use 'Continue with Google'.";
+    setAuthError(errorMsg);
+    throw new Error(errorMsg);
   };
 
-  const registerWithEmail = async (email: string, password: string, name: string) => {
-    try {
-      setAuthError(null);
-      setIsFirebaseLoading(true);
-      const userCredential = await createUserWithEmailAndPassword(auth, email.trim(), password);
-      if (userCredential.user) {
-        await updateProfile(userCredential.user, {
-          displayName: name.trim()
-        });
-      }
-    } catch (err: unknown) {
-      console.error("Firebase email registration error: ", err);
-      const friendly = mapAuthError(err);
-      setAuthError(friendly);
-      throw new Error(friendly);
-    } finally {
-      setIsFirebaseLoading(false);
-    }
+  const registerWithEmail = async (_email: string, _password: string, _name: string) => {
+    const errorMsg = "Direct email registration is disabled. Only individuals with a Google account can create an account. Please use 'Continue with Google'.";
+    setAuthError(errorMsg);
+    throw new Error(errorMsg);
   };
 
-  const sendPasswordReset = async (email: string) => {
-    try {
-      setAuthError(null);
-      setIsFirebaseLoading(true);
-      await sendPasswordResetEmail(auth, email.trim());
-    } catch (err: unknown) {
-      console.error("Password reset error: ", err);
-      const friendly = mapAuthError(err);
-      setAuthError(friendly);
-      throw new Error(friendly);
-    } finally {
-      setIsFirebaseLoading(false);
-    }
+  const sendPasswordReset = async (_email: string) => {
+    const errorMsg = "Password reset is disabled because logins and account creations are managed exclusively via Google Accounts. Please use 'Continue with Google'.";
+    setAuthError(errorMsg);
+    throw new Error(errorMsg);
   };
 
   const login = (email: string, name?: string) => {

@@ -315,6 +315,49 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "title", "author", "authorId", "category", "content"]
+    },
+    "TravelPlanItem": {
+      "title": "TravelPlanItem",
+      "description": "Sri Lankan community travel buddy notice and coordination plan",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 100 },
+        "authorId": { "type": "string", "maxLength": 128 },
+        "loc": { "type": "string", "maxLength": 100 },
+        "img": { "type": "string", "maxLength": 1000 },
+        "destination": { "type": "string", "maxLength": 200 },
+        "dates": { "type": "string", "maxLength": 100 },
+        "budget": { "type": "string", "maxLength": 100 },
+        "interests": { "type": "array" },
+        "desc": { "type": "string", "maxLength": 3000 },
+        "joinRequests": { "type": "array" },
+        "approvedCompanions": { "type": "array" },
+        "coordinationNotes": { "type": "array" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "authorId", "destination"]
+    },
+    "NotificationItem": {
+      "title": "NotificationItem",
+      "description": "User and system community alert across all portal sections",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 200 },
+        "message": { "type": "string", "maxLength": 2000 },
+        "section": { "type": "string", "maxLength": 50 },
+        "type": { "type": "string", "maxLength": 50 },
+        "link": { "type": "string", "maxLength": 500 },
+        "readBy": { "type": "array" },
+        "authorName": { "type": "string", "maxLength": 100 },
+        "authorAvatar": { "type": "string", "maxLength": 1000 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "title", "message", "createdAt"]
     }
   },
   "firestore": {
@@ -381,6 +424,14 @@
     "/discussions/{discussionId}": {
       "schema": "DiscussionItem",
       "description": "Community board forum topics and thread conversations"
+    },
+    "/travel_plans/{planId}": {
+      "schema": "TravelPlanItem",
+      "description": "Community travel buddy notices and companion coordination plans"
+    },
+    "/notifications/{notifId}": {
+      "schema": "NotificationItem",
+      "description": "Cross-section notifications, alerts and reminders"
     }
   }
 }

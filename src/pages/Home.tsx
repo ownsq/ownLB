@@ -109,34 +109,6 @@ export function Home() {
         </div>
       )}
 
-      {/* Sub Navigation */}
-      <div className="flex items-center justify-start md:justify-center gap-6 md:gap-10 border-b border-neutral-200 overflow-x-auto no-scrollbar pt-2 -mx-4 px-4 md:mx-0 md:px-0">
-        {[
-          { name: "Community", icon: Users, path: "/", active: true },
-          { name: "Temples", icon: Building2, path: "/temples", key: "temples" },
-          { name: "Monks", icon: User, path: "/monks", key: "monks" },
-          { name: "Famous People", icon: Sparkles, path: "/famous", key: "famous" },
-          { name: "Restaurants", icon: Utensils, path: "/restaurants", key: "restaurants" },
-          { name: "Videos", icon: PlayCircle, path: "/videos", key: "videos" },
-          { name: "Events", icon: Calendar, path: "/events", key: "events" },
-          { name: "Learn", icon: BookOpen, path: "/learn", key: "learn" },
-          { name: "Marketplace", icon: ShoppingBag, path: "/classifieds", key: "classifieds" },
-          { name: "Directory", icon: MapPin, path: "/directory", key: "directory" },
-        ].filter(tab => !tab.key || isSectionEnabled(tab.key as any)).map((tab, i) => (
-          <Link 
-            key={i} 
-            to={tab.path}
-            className={`flex items-center gap-2 pb-4 text-xs md:text-sm font-medium whitespace-nowrap border-b-2 transition-colors -mb-[1px] ${
-              tab.active 
-                ? 'border-amber-600 text-amber-700 font-bold' 
-                : 'border-transparent text-neutral-500 hover:text-neutral-900 hover:border-neutral-300'
-            }`}
-          >
-            <tab.icon className={`w-4 h-4 ${tab.active ? 'text-amber-600' : 'text-neutral-400'}`} />
-            {tab.name}
-          </Link>
-        ))}
-      </div>
 
       {/* Hero Banner */}
       <div className="relative rounded-2xl overflow-hidden bg-amber-900 text-white min-h-[360px] flex items-center">

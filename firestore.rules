@@ -201,10 +201,37 @@ service cloud.firestore {
         (!('details' in data) || (data.details is string && data.details.size() <= 2000));
     }
 
+    function isValidTravelPlan(data) {
+      return data.keys().hasAll(['id', 'name', 'authorId', 'destination', 'createdAt']) &&
+        data.id is string && data.id.size() <= 128 &&
+        data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+        data.authorId is string && data.authorId.size() <= 128 &&
+        data.destination is string && data.destination.size() > 0 && data.destination.size() <= 200 &&
+        (!('loc' in data) || (data.loc is string && data.loc.size() <= 100)) &&
+        (!('img' in data) || (data.img is string && data.img.size() <= 1000)) &&
+        (!('dates' in data) || (data.dates is string && data.dates.size() <= 100)) &&
+        (!('budget' in data) || (data.budget is string && data.budget.size() <= 100)) &&
+        (!('desc' in data) || (data.desc is string && data.desc.size() <= 3000));
+    }
+
+    function isValidNotification(data) {
+      return data.keys().hasAll(['id', 'title', 'message', 'createdAt']) &&
+        data.id is string && data.id.size() <= 128 &&
+        data.title is string && data.title.size() > 0 && data.title.size() <= 200 &&
+        data.message is string && data.message.size() > 0 && data.message.size() <= 2000 &&
+        (!('section' in data) || (data.section is string && data.section.size() <= 50)) &&
+        (!('type' in data) || (data.type is string && data.type.size() <= 50)) &&
+        (!('link' in data) || (data.link is string && data.link.size() <= 500)) &&
+        (!('userId' in data) || (data.userId is string && data.userId.size() <= 128)) &&
+        (!('authorName' in data) || (data.authorName is string && data.authorName.size() <= 100)) &&
+        (!('authorAvatar' in data) || (data.authorAvatar is string && data.authorAvatar.size() <= 1000)) &&
+        (!('readBy' in data) || (data.readBy is list));
+    }
+
     // 1. User Profiles Collection
     match /users/{userId} {
       allow get: if isValidId(userId);
-      allow list: if isSignedIn();
+      allow list: if true;
       allow create: if isValidId(userId) && isOwner(userId) && isValidUser(incoming()) &&
         incoming().role == 'Member' &&
         incoming().isBanned == false &&
@@ -222,18 +249,22 @@ service cloud.firestore {
 
     // 2. Admins Registry Collection
     match /admins/{userId} {
-      allow read, write: if isValidId(userId) && isAdmin();
+      allow get: if isValidId(userId) && isAdmin();
+      allow list: if isAdmin();
+      allow write: if isValidId(userId) && isAdmin();
     }
 
     // 3. Site Settings (AdSense & Section Visibility)
     match /site_settings/{settingId} {
-      allow read: if isValidId(settingId);
+      allow get: if isValidId(settingId);
+      allow list: if true;
       allow write: if isValidId(settingId) && isAdmin();
     }
 
     // 4. Classifieds and Auctions Collection
     match /classifieds/{itemId} {
-      allow read: if isValidId(itemId);
+      allow get: if isValidId(itemId);
+      allow list: if true;
       allow create: if isValidId(itemId) && isSignedIn() && isValidClassified(incoming()) &&
         incoming().sellerId == request.auth.uid;
       allow update: if isValidId(itemId) && isValidClassified(incoming()) && (
@@ -249,7 +280,8 @@ service cloud.firestore {
 
     // 5. Events Collection
     match /events/{eventId} {
-      allow read: if isValidId(eventId);
+      allow get: if isValidId(eventId);
+      allow list: if true;
       allow create: if isValidId(eventId) && isSignedIn() && isValidEvent(incoming()) &&
         incoming().organizerId == request.auth.uid;
       allow update: if isValidId(eventId) && isValidEvent(incoming()) && (
@@ -265,14 +297,16 @@ service cloud.firestore {
 
     // 6. Event RSVPs Collection
     match /event_rsvps/{rsvpId} {
-      allow read: if isValidId(rsvpId);
+      allow get: if isValidId(rsvpId);
+      allow list: if true;
       allow create: if isValidId(rsvpId) && isSignedIn() && incoming().userId == request.auth.uid;
       allow update, delete: if isValidId(rsvpId) && (isAdmin() || (isSignedIn() && existing().userId == request.auth.uid));
     }
 
     // 7. Buddhism Training Courses Collection
     match /courses/{courseId} {
-      allow read: if isValidId(courseId);
+      allow get: if isValidId(courseId);
+      allow list: if true;
       allow create: if isValidId(courseId) && isSignedIn() && isValidCourse(incoming()) &&
         incoming().createdBy == request.auth.uid;
       allow update: if isValidId(courseId) && isValidCourse(incoming()) && (
@@ -288,7 +322,8 @@ service cloud.firestore {
 
     // 8. Dhamma Videos Collection
     match /videos/{videoId} {
-      allow read: if isValidId(videoId);
+      allow get: if isValidId(videoId);
+      allow list: if true;
       allow create: if isValidId(videoId) && isSignedIn() && isValidVideo(incoming());
       allow update: if isValidId(videoId) && (
         isAdmin() ||
@@ -299,7 +334,8 @@ service cloud.firestore {
 
     // 9. Temples Collection
     match /temples/{templeId} {
-      allow read: if isValidId(templeId);
+      allow get: if isValidId(templeId);
+      allow list: if true;
       allow create: if isValidId(templeId) && isSignedIn() && isValidTemple(incoming());
       allow update: if isValidId(templeId) && (isAdmin() || (isSignedIn() && existing().createdBy == request.auth.uid));
       allow delete: if isValidId(templeId) && isAdmin();
@@ -307,7 +343,8 @@ service cloud.firestore {
 
     // 10. Monks Collection
     match /monks/{monkId} {
-      allow read: if isValidId(monkId);
+      allow get: if isValidId(monkId);
+      allow list: if true;
       allow create: if isValidId(monkId) && isSignedIn() && isValidMonk(incoming());
       allow update: if isValidId(monkId) && (isAdmin() || (isSignedIn() && existing().createdBy == request.auth.uid));
       allow delete: if isValidId(monkId) && isAdmin();
@@ -315,7 +352,8 @@ service cloud.firestore {
 
     // 11. Restaurants Collection
     match /restaurants/{restaurantId} {
-      allow read: if isValidId(restaurantId);
+      allow get: if isValidId(restaurantId);
+      allow list: if true;
       allow create: if isValidId(restaurantId) && isSignedIn() && isValidRestaurant(incoming());
       allow update: if isValidId(restaurantId) && (isAdmin() || (isSignedIn() && existing().createdBy == request.auth.uid));
       allow delete: if isValidId(restaurantId) && isAdmin();
@@ -323,7 +361,8 @@ service cloud.firestore {
 
     // 12. Community Feed Posts Collection
     match /posts/{postId} {
-      allow read: if isValidId(postId);
+      allow get: if isValidId(postId);
+      allow list: if true;
       allow create: if isValidId(postId) && isSignedIn() && isValidPost(incoming()) && incoming().authorId == request.auth.uid;
       allow update: if isValidId(postId) && (
         isAdmin() ||
@@ -334,7 +373,8 @@ service cloud.firestore {
 
     // 13. Community Groups Collection
     match /groups/{groupId} {
-      allow read: if isValidId(groupId);
+      allow get: if isValidId(groupId);
+      allow list: if true;
       allow create: if isValidId(groupId) && isSignedIn() && isValidGroup(incoming());
       allow update: if isValidId(groupId) && (
         isAdmin() ||
@@ -345,7 +385,8 @@ service cloud.firestore {
 
     // 14. Platform Reports Collection
     match /reports/{reportId} {
-      allow read: if isValidId(reportId) && isAdmin();
+      allow get: if isValidId(reportId) && isAdmin();
+      allow list: if isAdmin();
       allow create: if isValidId(reportId) && isSignedIn() && isValidReport(incoming()) &&
         incoming().reporterId == request.auth.uid;
       allow update, delete: if isValidId(reportId) && isAdmin();
@@ -353,7 +394,8 @@ service cloud.firestore {
 
     // 15. Famous People & Notable Personalities Collection
     match /famous_people/{personId} {
-      allow read: if isValidId(personId);
+      allow get: if isValidId(personId);
+      allow list: if true;
       allow create: if isValidId(personId) && isSignedIn() && isValidFamousPerson(incoming());
       allow update: if isValidId(personId) && (isAdmin() || (isSignedIn() && existing().createdBy == request.auth.uid));
       allow delete: if isValidId(personId) && isAdmin();
@@ -361,13 +403,39 @@ service cloud.firestore {
 
     // 16. Community Board Discussions Collection
     match /discussions/{discussionId} {
-      allow read: if isValidId(discussionId);
+      allow get: if isValidId(discussionId);
+      allow list: if true;
       allow create: if isValidId(discussionId) && isSignedIn() && isValidDiscussion(incoming()) && incoming().authorId == request.auth.uid;
       allow update: if isValidId(discussionId) && (
         isAdmin() ||
         (isSignedIn() && incoming().diff(existing()).affectedKeys().hasOnly(['likes', 'replies', 'comments', 'updatedAt']))
       );
       allow delete: if isValidId(discussionId) && (isAdmin() || (isSignedIn() && existing().authorId == request.auth.uid));
+    }
+
+    // 17. Travel Plans (Travel Buddies) Collection
+    match /travel_plans/{planId} {
+      allow get: if isValidId(planId);
+      allow list: if true;
+      allow create: if isValidId(planId) && isSignedIn() && isValidTravelPlan(incoming()) && incoming().authorId == request.auth.uid;
+      allow update: if isValidId(planId) && (
+        isAdmin() ||
+        (isSignedIn() && incoming().diff(existing()).affectedKeys().hasOnly(['joinRequests', 'approvedCompanions', 'coordinationNotes', 'updatedAt'])) ||
+        (isSignedIn() && existing().authorId == request.auth.uid)
+      );
+      allow delete: if isValidId(planId) && (isAdmin() || (isSignedIn() && existing().authorId == request.auth.uid));
+    }
+
+    // 18. Notifications & Alerts Collection
+    match /notifications/{notifId} {
+      allow get: if isValidId(notifId);
+      allow list: if true;
+      allow create: if isValidId(notifId) && isSignedIn() && isValidNotification(incoming());
+      allow update: if isValidId(notifId) && (
+        isAdmin() ||
+        (isSignedIn() && incoming().diff(existing()).affectedKeys().hasOnly(['readBy', 'updatedAt']))
+      );
+      allow delete: if isValidId(notifId) && (isAdmin() || (isSignedIn() && existing().userId == request.auth.uid));
     }
   }
 }

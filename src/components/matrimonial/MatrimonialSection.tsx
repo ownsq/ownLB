@@ -24,7 +24,7 @@ interface MatrimonialSectionProps {
 
 export function MatrimonialSection({
   currentUserEmail = "damika1316@gmail.com",
-  currentUserName = "Saminda Fernando",
+  currentUserName = "Damika",
   onShowToast = (msg: string) => console.log(msg)
 }: MatrimonialSectionProps) {
   const [isAgeVerified, setIsAgeVerified] = useState(false);
